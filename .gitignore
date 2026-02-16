@@ -1,0 +1,27 @@
+# Claude Code
+.claude/
+CLAUDE.md
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Exported conversations
+*.txt.bak
+2026-*.txt
+
+# Test data (potentially confidential)
+tests/
+
+# Compiled binaries
+firemod-master/obj/
+firemod-master/bin/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
