@@ -26,6 +26,11 @@ farsite_*.png
 firemod-master/obj/
 firemod-master/bin/
 
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+
 # Old/unused scripts
 visualize.py
 visualize_v1_basic.py
