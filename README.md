@@ -21,7 +21,7 @@ FARSITE 5 Things/
 ├── tests/                       # Test datasets and reference outputs
 │   ├── *.lcp                    # Landscape files
 │   ├── *.input                  # Simulation configuration
-│   ├── *.shp/shx/dbf/prj       # Shapefiles (ignitions, barriers, perimeters)
+│   ├── *.shp/shx/dbf/prj        # Shapefiles (ignitions, barriers, perimeters)
 │   ├── *.wnd / *.wtr            # Wind and weather data
 │   ├── Per1_*, Per2_*, Per3_*   # Observed fire perimeters (real data)
 │   └── run*.txt                 # Command files for TestFARSITE
@@ -227,15 +227,19 @@ What you see:
 The comparison reveals important differences:
 
 ### Shape
+
 FARSITE simulated a nearly **circular expansion** in all directions. The real fire was much more **elongated toward the south/southeast**, forming a "tongue" that extended far from the ignition point.
 
 ### Direction
+
 The real fire was clearly pushed by a dominant wind direction toward the southeast. FARSITE did not capture this asymmetry well — the fixed wind inputs don't fully represent what actually happened over those 4 days.
 
 ### Size
+
 The real fire perimeter on Sept 6 extends much further southeast than FARSITE simulated. But in the north/west, FARSITE **overestimated** — it simulated fire in areas where it didn't actually reach.
 
 ### Why the difference?
+
 A single deterministic run uses **fixed inputs** (exact wind speed, exact humidity, exact fuel moisture). Reality is much more variable — wind shifts, gusts, local humidity changes, terrain effects. One set of fixed inputs can never fully capture what actually happened over 96 hours.
 
 ---

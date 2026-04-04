@@ -1,0 +1,63 @@
+# farsite-runner — FARSITE binary + AWS CLI + S3 entrypoint wrapper
+#
+# Multi-stage build:
+#   Stage 1 (builder):  gcc:12  →  compiles TestFARSITE from source
+#   Stage 2 (runner):   debian:bookworm-slim  →  binary + AWS CLI + run_farsite.sh
+#
+# Build:
+#   docker build -t farsite-runner -f firemod-master/Dockerfile.runner firemod-master/
+#
+# Local test (requires CASE_1.lcp and ensemble in tests/):
+#   docker run --rm \
+#     -e RUN_ID=run_001 -e S3_BUCKET=my-bucket \
+#     farsite-runner
+
+# ── Stage 1: Build ────────────────────────────────────────────────────────────
+FROM gcc:12 AS builder
+
+WORKDIR /farsite
+
+COPY src/ src/
+COPY Makefile .
+
+RUN mkdir -p bin obj && make
+
+# ── Stage 2: Runtime + AWS CLI + wrapper ──────────────────────────────────────
+FROM debian:bookworm-slim
+
+# Runtime dependencies for FARSITE + Python for input generation + visualization
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libstdc++6 \
+        ca-certificates \
+        curl \
+        unzip \
+        bash \
+        python3 \
+        python3-pip \
+        python3-numpy \
+        python3-matplotlib \
+    && pip3 install --no-cache-dir pyshp --break-system-packages \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install AWS CLI v2 (used by run_farsite.sh for S3 data transfer)
+RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" \
+        -o /tmp/awscliv2.zip \
+    && unzip -q /tmp/awscliv2.zip -d /tmp \
+    && /tmp/aws/install \
+    && rm -rf /tmp/aws /tmp/awscliv2.zip
+
+# Copy FARSITE binary from builder
+COPY --from=builder /farsite/bin/TestFARSITE /usr/local/bin/TestFARSITE
+
+# Copy entrypoint and helper scripts
+COPY run_farsite.sh        /usr/local/bin/run_farsite.sh
+COPY run_visualize.sh      /usr/local/bin/run_visualize.sh
+COPY generate_run.py       /usr/local/bin/generate_run.py
+COPY visualize_probability.py /usr/local/bin/visualize_probability.py
+RUN chmod +x /usr/local/bin/run_farsite.sh /usr/local/bin/run_visualize.sh
+
+RUN mkdir -p /data/input /data/output
+
+WORKDIR /data
+
+ENTRYPOINT ["/usr/local/bin/run_farsite.sh"]

@@ -1,0 +1,116 @@
+name: FARSITE Probabilistic Ensemble
+
+on:
+  workflow_dispatch:
+    inputs:
+      n_runs:
+        description: 'Number of simulation runs'
+        required: true
+        default: '1000'
+      destroy_after:
+        description: 'Destroy infrastructure after run'
+        required: true
+        default: 'true'
+        type: choice
+        options: ['true', 'false']
+
+jobs:
+  ensemble:
+    name: Run ensemble (${{ inputs.n_runs }} runs)
+    runs-on: ubuntu-latest
+    timeout-minutes: 480   # 8 hours max
+
+    steps:
+      # ── Setup ────────────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            eu-west-1
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.7"
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+
+      # ── Infrastructure ───────────────────────────────────────────────────────
+      - name: Terraform init + apply
+        run: |
+          cd terraform
+          terraform init
+          terraform apply -auto-approve
+
+      - name: Configure kubectl
+        run: |
+          REGION=$(terraform -chdir=terraform output -raw aws_region)
+          CLUSTER=$(terraform -chdir=terraform output -raw cluster_name)
+          aws eks update-kubeconfig --region "$REGION" --name "$CLUSTER"
+
+      # ── Upload base assets (fast — no perturbed inputs) ──────────────────────
+      - name: Upload base assets to S3
+        run: bash scripts/02_upload_inputs.sh
+
+      # ── Build & push Docker image ─────────────────────────────────────────────
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push runner image
+        uses: docker/build-push-action@v5
+        with:
+          context: firemod-master
+          file: firemod-master/Dockerfile.runner
+          platforms: linux/amd64
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/farsite-runner:latest
+
+      # ── Simulations ──────────────────────────────────────────────────────────
+      - name: Submit ${{ inputs.n_runs }} simulation jobs
+        run: bash scripts/03_submit_jobs.sh ${{ inputs.n_runs }}
+
+      - name: Wait for simulations to complete
+        run: |
+          BUCKET=$(terraform -chdir=terraform output -raw s3_bucket_name)
+          N=${{ inputs.n_runs }}
+          echo "Waiting for $N runs in s3://$BUCKET/outputs/ ..."
+          while true; do
+            COUNT=$(aws s3 ls "s3://$BUCKET/outputs/" | grep -c "PRE " || echo 0)
+            echo "  $(date +%H:%M:%S)  Completed: $COUNT / $N"
+            [ "$COUNT" -ge "$N" ] && break
+            sleep 60
+          done
+
+      # ── Visualization on EKS (no 30GB download) ───────────────────────────────
+      - name: Run visualization job on EKS
+        run: bash scripts/05_visualize_on_eks.sh ${{ inputs.n_runs }}
+
+      - name: Upload probability map as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: farsite-probability-map
+          path: farsite_v6_probability.png
+          retention-days: 30
+
+      # ── Cleanup ──────────────────────────────────────────────────────────────
+      - name: Destroy infrastructure
+        if: ${{ inputs.destroy_after == 'true' }}
+        run: |
+          BUCKET=$(terraform -chdir=terraform output -raw s3_bucket_name)
+          aws s3 rm "s3://$BUCKET/" --recursive
+          terraform -chdir=terraform destroy -auto-approve
+
+      - name: Destroy on failure
+        if: failure()
+        run: |
+          BUCKET=$(terraform -chdir=terraform output -raw s3_bucket_name 2>/dev/null || echo "")
+          [ -n "$BUCKET" ] && aws s3 rm "s3://$BUCKET/" --recursive || true
+          terraform -chdir=terraform destroy -auto-approve || true

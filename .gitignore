@@ -11,12 +11,33 @@ __pycache__/
 *.txt.bak
 2026-*.txt
 
-# Test data (potentially confidential)
-tests/
+# Test data — only ensemble/ excluded (generated, 10GB+)
+# CASE_1.lcp, shapefiles etc. ARE tracked (needed by pipeline)
+tests/ensemble/
+
+# Simulation outputs (generated, 30GB+)
+output/
+
+# Generated images (reproducible from pipeline)
+*.png
+farsite_*.png
 
 # Compiled binaries
 firemod-master/obj/
 firemod-master/bin/
+
+# Old/unused scripts
+visualize.py
+visualize_v1_basic.py
+visualize_v2_perimeters.py
+visualize_v3_vs_observed.py
+visualize_v4_side_by_side.py
+visualize_v5_ensemble.py
+
+# Local docs (not part of pipeline)
+diario/
+Informe_Inicial_v2_condensat.md
+mermaid.png
 
 # OS files
 .DS_Store
