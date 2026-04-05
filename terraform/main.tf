@@ -8,8 +8,13 @@ terraform {
     }
   }
 
-  # State stored locally — for a TFG this is fine.
-  # For teams, move to an S3 backend.
+  backend "s3" {
+    bucket         = "farsite-tfstate"       # Nombre del bucket
+    key            = "terraform.tfstate"     # Ruta dentro del bucket
+    region         = "eu-west-1"
+    dynamodb_table = "farsite-tfstate-lock"
+    encrypt        = true
+  }
 }
 
 provider "aws" {
