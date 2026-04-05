@@ -37,13 +37,13 @@ variable "node_desired" {
     Case 1+ (4d simulation, ~7m/run): 25 nodes → 50 concurrent → ~60 min for 500 runs
   EOT
   type        = number
-  default     = 8   # limited by account vCPU quota (5 vCPUs → max 2 t3.medium)
+  default     = 16  # SPOT quota separate from On-Demand → 32 concurrent pods
 }
 
 variable "node_max" {
   description = "Maximum number of worker nodes (auto-scaling ceiling)"
   type        = number
-  default     = 8   # limited by account vCPU quota
+  default     = 16  # SPOT allows more nodes than On-Demand quota
 }
 
 variable "runner_image" {

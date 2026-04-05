@@ -45,7 +45,7 @@ resource "aws_eks_node_group" "farsite" {
   subnet_ids      = aws_subnet.public[*].id
 
   instance_types = [var.node_instance_type]
-  capacity_type  = "ON_DEMAND"
+  capacity_type  = "SPOT"
 
   launch_template {
     id      = aws_launch_template.farsite.id

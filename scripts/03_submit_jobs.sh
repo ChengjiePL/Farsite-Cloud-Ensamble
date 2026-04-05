@@ -46,7 +46,8 @@ metadata:
     app: farsite
 spec:
   ttlSecondsAfterFinished: 3600
-  backoffLimit: 3
+  activeDeadlineSeconds: 600
+  backoffLimit: 1
   template:
     spec:
       restartPolicy: OnFailure
@@ -61,10 +62,10 @@ spec:
           resources:
             requests:
               cpu: "900m"
-              memory: "2Gi"
+              memory: "700Mi"
             limits:
               cpu: "1"
-              memory: "2.5Gi"
+              memory: "1.5Gi"
 ---
 EOF
 done
