@@ -46,10 +46,10 @@ metadata:
     app: farsite
 spec:
   ttlSecondsAfterFinished: 3600
-  activeDeadlineSeconds: 600
-  backoffLimit: 1
+  backoffLimit: 2
   template:
     spec:
+      activeDeadlineSeconds: 600
       restartPolicy: OnFailure
       containers:
         - name: farsite
