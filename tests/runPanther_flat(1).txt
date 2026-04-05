@@ -1,2 +1,0 @@
-./FLATLAND1.LCP ./cust_flat.input ./Flat_ignition.shp 0 ./Flatland 0
-

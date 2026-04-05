@@ -1,1 +1,0 @@
-./case_1/CASE_1.lcp ./case_1/case_1.input ./case_1/Per1_02092013.shp 0 ./case_1/output/Case_1 0
