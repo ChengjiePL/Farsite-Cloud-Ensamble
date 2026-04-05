@@ -19,6 +19,7 @@ jobs:
     name: Run ensemble (${{ inputs.n_runs }} runs)
     runs-on: ubuntu-latest
     timeout-minutes: 480   # 8 hours max
+    environment: AWS   # 👈 AQUÍ
 
     steps:
       # ── Setup ────────────────────────────────────────────────────────────────
