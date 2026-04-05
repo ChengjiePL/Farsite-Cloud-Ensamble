@@ -32,7 +32,7 @@ aws s3 cp tests/case_1_extended.input       "s3://$BUCKET/base/case_1_extended.i
 echo "Uploading ignition shapefile..."
 for ext in shp shx prj dbf sbn sbx; do
     [ -f "tests/Per1_02092013.$ext" ] && \
-        aws s3 cp "tests/Per1_02092013.$ext" "s3://$BUCKET/base/tests/Per1_02092013.$ext"
+        aws s3 cp "tests/Per1_02092013.$ext" "s3://$BUCKET/base/Per1_02092013.$ext"
 done
 
 # ── Observed perimeters (Per1-Per4 — for visualization) ───────────────────────
@@ -40,7 +40,7 @@ echo "Uploading observed perimeter shapefiles..."
 for per in Per1_02092013 Per2_03092013 Per3_04092013 Per4_06092013; do
     for ext in shp shx prj dbf sbn sbx; do
         [ -f "tests/$per.$ext" ] && \
-            aws s3 cp "tests/$per.$ext" "s3://$BUCKET/base/tests/$per.$ext"
+            aws s3 cp "tests/$per.$ext" "s3://$BUCKET/base/$per.$ext"
     done
 done
 
