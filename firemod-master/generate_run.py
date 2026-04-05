@@ -3,7 +3,7 @@
 Generate a single perturbed FARSITE .input file for a given run number.
 
 Called by run_farsite.sh inside the container — replaces the S3 input download.
-Reproduces exactly the same parameter sequence as generate_ensemble.py v4.
+Reproduces exactly the same parameter sequence as generate_ensemble.py v6.
 
 Usage:
     python3 generate_run.py <run_id> <template_input> <output_input>
@@ -13,17 +13,19 @@ Usage:
 import sys
 import numpy as np
 
-# Must match generate_ensemble.py exactly
-RNG_SEED       = 42
-BASE_SEED      = 253114
-DIR_SIGMA      = 20.0
-SPEED_SIGMA    = 0.20
-NW_AMP         = 3.5
-NW_MIN_DIR     = 270
-NW_MAX_DIR     = 360
-MOISTURE_SIGMA = 0.25
-MOISTURE_MIN   = {1: 2, 10: 4, 100: 6}
-MIN_SPEED      = 1
+# Must match generate_ensemble.py exactly — v6
+RNG_SEED        = 42
+BASE_SEED       = 253114
+DIR_SIGMA       = 20.0
+SPEED_SIGMA     = 0.20
+NW_AMP          = 5.0
+NW_MIN_DIR      = 285
+NW_MAX_DIR      = 330
+MOISTURE_SIGMA  = 0.25
+MOISTURE_MIN    = {1: 2, 10: 4, 100: 6}
+MIN_SPEED       = 1
+FOEHN_THRESHOLD = NW_AMP
+FOEHN_DRYING    = 0.75
 
 
 def parse_input_file(path):
@@ -90,13 +92,17 @@ def sample_params(run_num):
         rng.lognormal(np.log(NW_AMP), SPEED_SIGMA)
         rng.lognormal(0, MOISTURE_SIGMA)
 
-    return (
-        rng.normal(0, DIR_SIGMA),
-        rng.lognormal(0, SPEED_SIGMA),
-        rng.lognormal(np.log(NW_AMP), SPEED_SIGMA),
-        rng.lognormal(0, MOISTURE_SIGMA),
-        BASE_SEED + run_num,
-    )
+    direction_offset    = rng.normal(0, DIR_SIGMA)
+    speed_multiplier    = rng.lognormal(0, SPEED_SIGMA)
+    nw_amp_multiplier   = rng.lognormal(np.log(NW_AMP), SPEED_SIGMA)
+    moisture_multiplier = rng.lognormal(0, MOISTURE_SIGMA)
+
+    # Foehn drying: above-average NW amp → correlated moisture reduction
+    if nw_amp_multiplier > FOEHN_THRESHOLD:
+        moisture_multiplier *= FOEHN_DRYING
+
+    return (direction_offset, speed_multiplier, nw_amp_multiplier,
+            moisture_multiplier, BASE_SEED + run_num)
 
 
 def main():

@@ -65,7 +65,7 @@ burn_prob[burn_prob == 0] = np.nan
 fig, (ax_obs, ax_prob) = plt.subplots(1, 2, figsize=(22, 10))
 fig.suptitle(
     f"FARSITE Case 1 Extended — Determinista vs Probabilístic ({loaded} runs)\n"
-    "Vent: dir Normal(0°,σ=20°) | vel base LogNormal(σ=0.20) | NW ×3.5 amplif. topogràfica | Humitat LogNormal(σ=0.25)",
+    "Vent: dir Normal(0°,σ=20°) | vel LogNormal(σ=0.20) | NW 285-330° ×5.0 | Humitat LogNormal(σ=0.25) + Foehn drying ×0.75",
     fontsize=13, fontweight="bold"
 )
 

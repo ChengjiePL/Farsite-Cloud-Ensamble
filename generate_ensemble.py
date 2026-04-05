@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
 """
-Layer 2: Parameter Sampling — Monte Carlo Multi-Variable Ensemble v4
+Layer 2: Parameter Sampling — Monte Carlo Multi-Variable Ensemble v6
 
 Generates N_RUNS FARSITE input files with perturbations across:
   - Wind direction  : Normal(0°, DIR_SIGMA) — one offset per run
   - Wind speed      : direction-dependent amplification:
-      * NW sector (270-360°): LogNormal(mean=ln(NW_AMP), SPEED_SIGMA)
-        models topographic channeling that amplified NW winds in the real fire
+      * NW sector (285-330°): LogNormal(mean=ln(NW_AMP), SPEED_SIGMA)
+        models topographic channeling in the canyon — narrowed from 270-360°
       * Other directions: LogNormal(mean=0, SPEED_SIGMA)
   - Dead fuel moisture (1h, 10h, 100h): LogNormal(×1, MOISTURE_SIGMA)
+      * Foehn drying: when nw_amp > NW_AMP (above-average NW run),
+        moisture *= 0.75 — strong NW (Foehn) also dries fuel
 
-Justification for NW amplification:
-  Wind data analysis shows NW winds (270-360°) dominated Sept 3-6 evenings —
-  exactly the period the real fire expanded SE. Station measurements (2-8 mph)
-  underestimate local wind due to topographic channeling. Amplification factor
-  NW_AMP=2.0 models this unobserved enhancement.
+Justification:
+  NW_AMP raised to 5.0 (from 3.5): real topographic channels amplify to ×5-×8.
+  Sector narrowed to 285-330°: avoids amplifying pure W (270°) or pure N (360°).
+  Foehn drying: correlated moisture reduction when NW winds are strongest.
 
 Output layout (inside tests/ensemble/):
     run_001/run_001.input
@@ -37,20 +38,20 @@ N_RUNS       = 10000
 BASE_SEED    = 253114             # original SPOTTING_SEED from template
 RNG_SEED     = 42                 # reproducibility of ensemble generation
 
-# Wind perturbation parameters (v4)
+# Wind perturbation parameters (v6)
 DIR_SIGMA    = 20.0   # degrees, normal distribution
 SPEED_SIGMA  = 0.20   # log-normal sigma (base variability for all directions)
 
-# NW topographic amplification (v4: new)
-# NW sector = 270-360° — these records drive SE fire spread
-# Station underestimates local wind due to topographic channeling
-NW_AMP       = 3.5    # mean amplification factor for NW winds (log-normal mean)
-NW_MIN_DIR   = 270    # NW sector start (degrees)
-NW_MAX_DIR   = 360    # NW sector end (degrees)
+# NW topographic amplification (v6: raised to 5.0, sector narrowed to 285-330°)
+NW_AMP       = 5.0    # mean amplification factor for NW winds (log-normal mean)
+NW_MIN_DIR   = 285    # NW sector start — excludes pure W (270°)
+NW_MAX_DIR   = 330    # NW sector end   — excludes pure N (360°)
 
-# Fuel moisture perturbation
-MOISTURE_SIGMA = 0.25
-MOISTURE_MIN   = {1: 2, 10: 4, 100: 6}
+# Fuel moisture perturbation + Foehn drying
+MOISTURE_SIGMA  = 0.25
+MOISTURE_MIN    = {1: 2, 10: 4, 100: 6}
+FOEHN_THRESHOLD = NW_AMP        # runs with nw_amp above mean = strong Foehn event
+FOEHN_DRYING    = 0.75          # moisture multiplied by this when Foehn active
 
 MIN_SPEED    = 1      # mph floor
 
@@ -197,10 +198,13 @@ def main():
         # Sample perturbations — one value per run (coherent across all rows)
         direction_offset    = rng.normal(0, DIR_SIGMA)
         speed_multiplier    = rng.lognormal(mean=0, sigma=SPEED_SIGMA)
-        # NW amplification: LogNormal centered on NW_AMP (e.g. mean=2.0)
         nw_amp_multiplier   = rng.lognormal(mean=np.log(NW_AMP), sigma=SPEED_SIGMA)
         moisture_multiplier = rng.lognormal(mean=0, sigma=MOISTURE_SIGMA)
         spotting_seed       = BASE_SEED + i
+
+        # Foehn drying: above-average NW amp → correlated moisture reduction
+        if nw_amp_multiplier > FOEHN_THRESHOLD:
+            moisture_multiplier *= FOEHN_DRYING
 
         # Write .input file
         input_content = build_input_content(
