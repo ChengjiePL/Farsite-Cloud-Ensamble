@@ -1,0 +1,1 @@
+/data/input/CASE_7.lcp /data/input/case_7.input /data/input/Per1_utm.shp 0 /data/output/Case_7 0

@@ -1,0 +1,1 @@
+/data/input/CASE_1.lcp /data/input/case_1_extended.input /data/input/Per1_02092013.shp 0 /data/output/Case_1_ext 0

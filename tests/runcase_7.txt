@@ -1,0 +1,2 @@
+./case_7/CASE_7.lcp ./case_7/case_7.input ./case_7/Per1_utm.shp 0 ./case_7/output/Case_7 0
+

@@ -1,0 +1,62 @@
+# than comments are only set by a leading pound sign
+# and projectfilename really should be the very first item 
+# in this file
+# please leave all the other items landscapefile adjustments file 
+# etc empty unless you want to override the project file. 
+#projectfilename =/home/elena/backupfarsitemarch28/trunk/ashley1.fpj
+
+version			= 43
+adjustmentFile 		= /home/ccarrillo/Escritorio/Flat_test/Input/GIS_themes/flatland1.ADJ
+fuelmoisturefile 	= /home/ccarrillo/Escritorio/Flat_test/Input/GIS_themes/flatland1.FMS
+landscapeFile		= /home/ccarrillo/Escritorio/Flat_test/Input/ASCII_files/FLATLAND1.LCP
+weatherFile0 		= /home/ccarrillo/Escritorio/Flat_test/Input/GIS_themes/flatland1.wtr
+windFile0 		= /home/ccarrillo/Escritorio/Flat_test/Input/GIS_themes/flatland1.wnd
+timestep 		= 10m
+visibleStep 		= 10m
+secondaryVisibleStep 	= 48h
+perimeterResolution 	= 30m
+distanceResolution 	= 30m
+
+enableCrownfire 		= false
+linkCrownDensityAndCover 	= false
+embersFromTorchingTrees 	= false
+enableSpotFireGrowth 		= false
+nwnsBackingROS 			= false
+fireacceleration		= false
+accelerationtranstion		= 1m
+distanceChecking 		= fireLevel
+simulatePostFrontalCombustion 	= false
+fuelInputOption 		= absent
+calculationPrecision 		= normal
+useConditioningPeriod 		= false 
+ignitionFile 			= /home/ccarrillo/Escritorio/Flat_test/Input/GIS_themes/Flat_ignition.shp
+ignitionFileType 		= point
+
+####fuelmodelfile=/home/user/Documentos/Fases2/FarsiteSIM/Simulacio1Lucas/Input/GIS_themes/ashley.FMD
+#fuelmodelfile =/home/tomas/Carlos/ORIGINAL/core/Input/ashley.FMD 
+#this should be east and then north white space delimited
+#note that gridrow and east north must both be set
+
+StartMonth 	= 8
+StartDay 	= 11
+StartHour 	= 0100
+StartMin 	= 00
+EndMonth	= 8
+EndDay 		= 12
+EndHour 	= 0100
+EndMin 		= 00
+RastMake 	= true
+RasterFileName 	= /home/ccarrillo/Escritorio/Flat_test/Output/raster
+VectMake 	= true
+VectorFileName 	= /home/ccarrillo/Escritorio/Flat_test/Output/vector.VCT
+ShapeMake 	= true
+shapefile 	= /home/ccarrillo/Escritorio/Flat_test/Output/shape.shp
+
+RAST_ARRIVALTIME 	= true
+RAST_FIREINTENSITY 	= false
+RAST_SPREADRATE 	= false
+RAST_FLAMELENGTH 	= false
+RAST_HEATPERAREA 	= false
+RAST_CROWNFIRE 		= false
+RAST_FIREDIRECTION 	= true
+RAST_REACTIONINTENSITY 	= false

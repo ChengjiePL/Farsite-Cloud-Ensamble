@@ -1,0 +1,78 @@
+Farsite BenchMark Results
+
+
+Simulation Info:
+	Landscape File: ./case_3/CASE_3.lcp
+	Landscape Resolution: 100.0
+	Landscape Size: 184 x 122
+	Inputs File: ./case_3/case_3.input
+	Farsite Start Time: 08 29 1133
+	Farsite End Time:   08 30 1127
+	Total Sim Time:     1436.400000
+	Ignition File:      ./case_3/Per1_27082013.shp
+	Barriers File:      None
+	Time Step:                  60.000000
+	Distance Resolution:        5.000000
+	Perimeter Resolution:       5.000000
+	Enable Spotting:            Yes
+	Spot Probability:           0.050000
+	Spot Ignition Delay:        0.000000
+	Spot Grid Resolution:        15
+	Spotting Seed:               253114
+	Minimum Spotting Distance:  30.000000
+	Foliar Moisture:            25.0000
+	Enable Crowning:            Yes
+	Crown Fire Method:          Finney
+	                            Crown Density NOT LINKED to Crown Cover
+	Dist Check Method:          Fire Level
+	Acceleration:               On
+	Backing Spread:             Calculated from Elliptical Dimensions
+	Simulation Started:         8/29 11:00
+	Simulation Ended:           08/30  10:00
+	Elapsed Time:               00 23:00
+	Restore Ignitions:          No
+	Preserve Inactive Enclaves: Yes
+	Tree Species Number:        1
+	Conditoning Start:          0/0
+	Burn Periods:           0
+	Relative Burn Periods:      0
+	Internal Weather:            4
+8 28 0 6 1500 61 82 60 23 1000 0 0
+8 29 0 6 1500 58 81 61 24 1000 0 0
+8 30 0 6 1500 56 82 80 24 1000 0 0
+8 31 0 6 1500 57 84 71 21 1000 0 0
+	Internal Winds:              32
+8 28 0 5 44 20
+8 28 3 7 61 20
+8 28 6 5 60 20
+8 28 9 9 67 20
+8 28 1200 8 64 20
+8 28 1500 7 56 20
+8 28 1800 6 55 20
+8 28 2100 6 67 20
+8 29 0 8 67 20
+8 29 3 5 55 20
+8 29 6 5 60 20
+8 29 9 8 63 20
+8 29 1200 7 60 20
+8 29 1500 6 50 20
+8 29 1800 5 42 20
+8 29 2100 6 60 20
+8 30 0 7 60 20
+8 30 3 5 72 20
+8 30 6 5 42 20
+8 30 9 5 66 20
+8 30 1200 4 53 20
+8 30 1500 4 15 20
+8 30 1800 3 0 20
+8 30 2100 3 329 20
+8 31 0 5 348 20
+8 31 3 5 56 20
+8 31 6 5 49 20
+8 31 9 5 59 20
+8 31 1200 4 65 20
+8 31 1500 3 32 20
+8 31 1800 2 26 20
+8 31 2100 4 52 20
+
+	Total Farsite Run Time: 1482.516 Seconds
