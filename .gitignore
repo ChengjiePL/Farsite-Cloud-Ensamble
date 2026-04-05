@@ -51,3 +51,24 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+
+tests/*
+!tests/CASE_1.lcp
+!tests/case_1_extended.input
+!tests/Per1_02092013.*
+!tests/Per2_03092013.*
+!tests/Per3_04092013.*
+!tests/Per4_06092013.*
+
+*.asc
+*.fbg
+*.aux.xml
+*.xml
+*.lock
+*.part
+*.tar.gz
+*.rar
+
+terraform/*.tfstate
+terraform/*.tfstate.backup
