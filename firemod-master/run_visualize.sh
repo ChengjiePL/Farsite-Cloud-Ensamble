@@ -34,7 +34,7 @@ aws s3 sync "s3://$S3_BUCKET/base/" /data/input/ --quiet
 # ── 3. Run visualization ──────────────────────────────────────────────────────
 echo "[visualize] Generating probability map..."
 ENSEMBLE_DIR=/data/output \
-TESTS_DIR=/data/input/tests \
+TESTS_DIR=/data/input \
 OUTPUT_FILE=/data/output/farsite_probability.png \
 N_RUNS=$N_RUNS \
 python3 /usr/local/bin/visualize_probability.py

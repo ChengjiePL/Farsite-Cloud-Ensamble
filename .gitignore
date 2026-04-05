@@ -72,3 +72,4 @@ tests/*
 
 terraform/*.tfstate
 terraform/*.tfstate.backup
+firemod-master/tests/
