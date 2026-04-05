@@ -109,9 +109,9 @@ jobs:
           aws s3 rm "s3://$BUCKET/" --recursive
           terraform -chdir=terraform destroy -auto-approve
 
-      # - name: Destroy on failure
-      #   if: failure()
-      #   run: |
-      #     BUCKET=$(terraform -chdir=terraform output -raw s3_bucket_name 2>/dev/null || echo "")
-      #     [ -n "$BUCKET" ] && aws s3 rm "s3://$BUCKET/" --recursive || true
-      #     terraform -chdir=terraform destroy -auto-approve || true
+      - name: Destroy on failure
+        if: failure()
+        run: |
+          BUCKET=$(terraform -chdir=terraform output -raw s3_bucket_name 2>/dev/null || echo "")
+          [ -n "$BUCKET" ] && aws s3 rm "s3://$BUCKET/" --recursive || true
+          terraform -chdir=terraform destroy -auto-approve || true
