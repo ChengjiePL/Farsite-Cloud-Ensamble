@@ -60,6 +60,11 @@ tests/*
 !tests/Per2_03092013.*
 !tests/Per3_04092013.*
 !tests/Per4_06092013.*
+!tests/CASE_7.lcp
+!tests/case_7_extended.input
+!tests/runcase_7_extended_docker.txt
+!tests/Case7_ignition.*
+!tests/Per4_utm.*
 
 *.asc
 *.fbg
