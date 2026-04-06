@@ -1,21 +1,18 @@
 #!/usr/bin/env python3
 """
-Layer 2: Parameter Sampling — Monte Carlo Multi-Variable Ensemble v6
+Layer 2: Parameter Sampling — Monte Carlo Multi-Variable Ensemble v7
 
 Generates N_RUNS FARSITE input files with perturbations across:
-  - Wind direction  : Normal(0°, DIR_SIGMA) — one offset per run
-  - Wind speed      : direction-dependent amplification:
-      * NW sector (285-330°): LogNormal(mean=ln(NW_AMP), SPEED_SIGMA)
-        models topographic channeling in the canyon — narrowed from 270-360°
-      * Other directions: LogNormal(mean=0, SPEED_SIGMA)
-  - Dead fuel moisture (1h, 10h, 100h): LogNormal(×1, MOISTURE_SIGMA)
-      * Foehn drying: when nw_amp > NW_AMP (above-average NW run),
-        moisture *= 0.75 — strong NW (Foehn) also dries fuel
+  - Wind direction  : Normal(0°, DIR_SIGMA) — independent offset per wind record
+  - Wind speed      : LogNormal(0, SPEED_SIGMA) — independent multiplier per wind record
+  - Dead fuel moisture (1h, 10h, 100h): LogNormal(×1, MOISTURE_SIGMA) — one value per run
 
-Justification:
-  NW_AMP raised to 5.0 (from 3.5): real topographic channels amplify to ×5-×8.
-  Sector narrowed to 285-330°: avoids amplifying pure W (270°) or pure N (360°).
-  Foehn drying: correlated moisture reduction when NW winds are strongest.
+Key change vs v6:
+  Per-record perturbation: each of the N hourly wind records gets its own independent
+  direction offset and speed multiplier drawn from the same distributions.
+  This produces genuinely diverse meteorological scenarios instead of identical-shifted
+  wind profiles. Uses per-run seed np.random.default_rng([RNG_SEED, run_num]) for
+  reproducibility without sequential RNG advancement.
 
 Output layout (inside tests/ensemble/):
     run_001/run_001.input
@@ -32,32 +29,28 @@ import numpy as np
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-BASE_INPUT   = "tests/case_1_extended.input"
+BASE_INPUT   = "tests/case_7_extended.input"
 ENSEMBLE_DIR = "tests/ensemble"   # lives inside tests/ so Docker mount works
 N_RUNS       = 10000
 BASE_SEED    = 253114             # original SPOTTING_SEED from template
 RNG_SEED     = 42                 # reproducibility of ensemble generation
 
-# Wind perturbation parameters (v6)
-DIR_SIGMA    = 20.0   # degrees, normal distribution
-SPEED_SIGMA  = 0.20   # log-normal sigma (base variability for all directions)
+# Wind perturbation parameters (v7 — per-record)
+DIR_SIGMA    = 20.0   # degrees, normal distribution — applied independently per wind record
+SPEED_SIGMA  = 0.20   # log-normal sigma — applied independently per wind record
 
-# NW topographic amplification (v6: raised to 5.0, sector narrowed to 285-330°)
-NW_AMP       = 5.0    # mean amplification factor for NW winds (log-normal mean)
-NW_MIN_DIR   = 285    # NW sector start — excludes pure W (270°)
-NW_MAX_DIR   = 330    # NW sector end   — excludes pure N (360°)
-
-# Fuel moisture perturbation + Foehn drying
+# Fuel moisture perturbation (one value per run, correlated across fuel models)
 MOISTURE_SIGMA  = 0.25
 MOISTURE_MIN    = {1: 2, 10: 4, 100: 6}
-FOEHN_THRESHOLD = NW_AMP        # runs with nw_amp above mean = strong Foehn event
-FOEHN_DRYING    = 0.75          # moisture multiplied by this when Foehn active
 
 MIN_SPEED    = 1      # mph floor
 
 # Fixed FARSITE assets (relative to /data/input Docker mount point = tests/)
-LCP_PATH     = "/data/input/CASE_1.lcp"
-IGN_PATH     = "/data/input/Per1_02092013.shp"
+LCP_PATH     = "/data/input/CASE_7.lcp"
+IGN_PATH     = "/data/input/Case7_ignition.shp"
+
+# RNG configuration (v7)
+# Each run uses np.random.default_rng([RNG_SEED, run_num]) — no sequential advancement needed
 
 
 # ---------------------------------------------------------------------------
@@ -128,8 +121,8 @@ def parse_input_file(path):
 # Writing
 # ---------------------------------------------------------------------------
 def build_input_content(header_lines, fuel_rows, mid_lines, wind_rows, post_wind,
-                        spotting_seed, direction_offset, speed_multiplier,
-                        nw_amp_multiplier, moisture_multiplier):
+                        spotting_seed, direction_offsets, speed_multipliers,
+                        moisture_multiplier):
     lines = []
 
     # Header — swap SPOTTING_SEED for the run-specific value
@@ -150,15 +143,10 @@ def build_input_content(header_lines, fuel_rows, mid_lines, wind_rows, post_wind
     # Mid section (unchanged) + WIND_DATA header
     lines.extend(mid_lines)
 
-    # Perturbed wind rows — direction-dependent speed amplification
-    for row in wind_rows:
-        new_dir = int((row["direction"] + direction_offset) % 360)
-        # Apply NW topographic amplification when original direction is in NW sector
-        if NW_MIN_DIR <= row["direction"] < NW_MAX_DIR:
-            effective_multiplier = speed_multiplier * nw_amp_multiplier
-        else:
-            effective_multiplier = speed_multiplier
-        new_speed = max(MIN_SPEED, round(row["speed"] * effective_multiplier))
+    # Perturbed wind rows — independent perturbation per record
+    for i, row in enumerate(wind_rows):
+        new_dir   = int((row["direction"] + direction_offsets[i]) % 360)
+        new_speed = max(MIN_SPEED, round(row["speed"] * speed_multipliers[i]))
         lines.append(
             f"{row['month']} {row['day']} {row['time']} "
             f"{new_speed} {new_dir} {row['cloud']}"
@@ -182,11 +170,10 @@ def write_docker_cmd(path, run_id):
 # Main
 # ---------------------------------------------------------------------------
 def main():
-    rng = np.random.default_rng(RNG_SEED)
-
     os.makedirs(ENSEMBLE_DIR, exist_ok=True)
 
     header_lines, fuel_rows, mid_lines, wind_rows, post_wind = parse_input_file(BASE_INPUT)
+    n_wind = len(wind_rows)
 
     params = []
 
@@ -195,22 +182,21 @@ def main():
         run_dir = os.path.join(ENSEMBLE_DIR, run_id)
         os.makedirs(run_dir, exist_ok=True)
 
-        # Sample perturbations — one value per run (coherent across all rows)
-        direction_offset    = rng.normal(0, DIR_SIGMA)
-        speed_multiplier    = rng.lognormal(mean=0, sigma=SPEED_SIGMA)
-        nw_amp_multiplier   = rng.lognormal(mean=np.log(NW_AMP), sigma=SPEED_SIGMA)
+        # Per-run seed — reproducible without sequential RNG advancement
+        rng = np.random.default_rng([RNG_SEED, i])
+
+        # Per-record perturbations: each wind record gets independent samples
+        direction_offsets   = rng.normal(0, DIR_SIGMA, size=n_wind)
+        speed_multipliers   = rng.lognormal(mean=0, sigma=SPEED_SIGMA, size=n_wind)
+        # Moisture: one value per run (correlated across fuel models — physically consistent)
         moisture_multiplier = rng.lognormal(mean=0, sigma=MOISTURE_SIGMA)
         spotting_seed       = BASE_SEED + i
-
-        # Foehn drying: above-average NW amp → correlated moisture reduction
-        if nw_amp_multiplier > FOEHN_THRESHOLD:
-            moisture_multiplier *= FOEHN_DRYING
 
         # Write .input file
         input_content = build_input_content(
             header_lines, fuel_rows, mid_lines, wind_rows, post_wind,
-            spotting_seed, direction_offset, speed_multiplier,
-            nw_amp_multiplier, moisture_multiplier,
+            spotting_seed, direction_offsets, speed_multipliers,
+            moisture_multiplier,
         )
         input_path = os.path.join(run_dir, f"{run_id}.input")
         with open(input_path, "w") as f:
@@ -221,12 +207,11 @@ def main():
         write_docker_cmd(docker_path, run_id)
 
         params.append({
-            "run_id":                 run_id,
-            "direction_offset_deg":   round(direction_offset, 4),
-            "speed_multiplier":       round(speed_multiplier, 4),
-            "nw_amp_multiplier":      round(nw_amp_multiplier, 4),
-            "moisture_multiplier":    round(moisture_multiplier, 4),
-            "spotting_seed":          spotting_seed,
+            "run_id":               run_id,
+            "dir_offset_mean_deg":  round(float(direction_offsets.mean()), 4),
+            "speed_mult_mean":      round(float(speed_multipliers.mean()), 4),
+            "moisture_multiplier":  round(moisture_multiplier, 4),
+            "spotting_seed":        spotting_seed,
         })
 
         if i % 100 == 0:
@@ -234,8 +219,8 @@ def main():
 
     # Traceability CSV
     csv_path = os.path.join(ENSEMBLE_DIR, "ensemble_params.csv")
-    fieldnames = ["run_id", "direction_offset_deg", "speed_multiplier",
-                  "nw_amp_multiplier", "moisture_multiplier", "spotting_seed"]
+    fieldnames = ["run_id", "dir_offset_mean_deg", "speed_mult_mean",
+                  "moisture_multiplier", "spotting_seed"]
     with open(csv_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
