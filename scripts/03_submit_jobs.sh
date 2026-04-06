@@ -34,6 +34,10 @@ echo "Image:   $RUNNER_IMAGE"
 echo "Bucket:  s3://$S3_BUCKET"
 echo "Case:    $CASE_NAME ($CASE_LABEL)"
 
+# Delete any existing farsite jobs (spec.template is immutable — can't patch existing jobs)
+echo "Deleting existing farsite jobs (if any)..."
+kubectl delete jobs -l app=farsite --ignore-not-found --wait=false
+
 echo "Generating and submitting $N_RUNS job manifests..."
 
 (
@@ -52,8 +56,12 @@ spec:
   ttlSecondsAfterFinished: 3600
   backoffLimit: 2
   template:
+    metadata:
+      labels:
+        app: farsite
+        case: ${CASE_NAME}
     spec:
-      activeDeadlineSeconds: 600
+      activeDeadlineSeconds: 1800
       restartPolicy: OnFailure
       containers:
         - name: farsite
