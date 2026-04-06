@@ -29,7 +29,7 @@ echo "Bucket:  s3://$S3_BUCKET"
 
 echo ""
 echo "Configuring kubectl..."
-aws eks update-kubeconfig --region "$REGION" --name "$CLUSTER"
+aws eks update-kubeconfig --region "$REGION" --name "$CLUSTER" --profile new-admin --alias farsite
 
 echo "Generating and submitting $N_RUNS job manifests..."
 
