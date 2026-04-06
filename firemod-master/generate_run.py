@@ -3,7 +3,10 @@
 Generate a single perturbed FARSITE .input file for a given run number.
 
 Called by run_farsite.sh inside the container — replaces the S3 input download.
-Reproduces exactly the same parameter sequence as generate_ensemble.py v6.
+Reproduces exactly the same parameter sequence as generate_ensemble.py v7.
+
+Per-record perturbation: each wind record gets independent direction and speed samples.
+Uses per-run seed np.random.default_rng([RNG_SEED, run_num]) — no sequential advancement.
 
 Usage:
     python3 generate_run.py <run_id> <template_input> <output_input>
@@ -13,19 +16,14 @@ Usage:
 import sys
 import numpy as np
 
-# Must match generate_ensemble.py exactly — v6
+# Must match generate_ensemble.py exactly — v7
 RNG_SEED        = 42
 BASE_SEED       = 253114
 DIR_SIGMA       = 20.0
 SPEED_SIGMA     = 0.20
-NW_AMP          = 5.0
-NW_MIN_DIR      = 285
-NW_MAX_DIR      = 330
 MOISTURE_SIGMA  = 0.25
 MOISTURE_MIN    = {1: 2, 10: 4, 100: 6}
 MIN_SPEED       = 1
-FOEHN_THRESHOLD = NW_AMP
-FOEHN_DRYING    = 0.75
 
 
 def parse_input_file(path):
@@ -59,8 +57,7 @@ def parse_input_file(path):
 
 
 def build_content(header_lines, fuel_rows, mid_lines, wind_rows, post_wind,
-                  spotting_seed, direction_offset, speed_multiplier,
-                  nw_amp_multiplier, moisture_multiplier):
+                  spotting_seed, direction_offsets, speed_multipliers, moisture_multiplier):
     lines = []
     for line in header_lines:
         lines.append(f"SPOTTING_SEED: {spotting_seed}" if line.startswith("SPOTTING_SEED:") else line)
@@ -73,36 +70,22 @@ def build_content(header_lines, fuel_rows, mid_lines, wind_rows, post_wind,
 
     lines.extend(mid_lines)
 
-    for row in wind_rows:
-        new_dir = int((row["direction"] + direction_offset) % 360)
-        amp = nw_amp_multiplier if NW_MIN_DIR <= row["direction"] < NW_MAX_DIR else speed_multiplier
-        new_speed = max(MIN_SPEED, round(row["speed"] * amp))
+    for i, row in enumerate(wind_rows):
+        new_dir   = int((row["direction"] + direction_offsets[i]) % 360)
+        new_speed = max(MIN_SPEED, round(row["speed"] * speed_multipliers[i]))
         lines.append(f"{row['month']} {row['day']} {row['time']} {new_speed} {new_dir} {row['cloud']}")
 
     lines.extend(post_wind)
     return "\n".join(lines)
 
 
-def sample_params(run_num):
-    """Advance RNG to run_num — produces identical sequence to generate_ensemble.py."""
-    rng = np.random.default_rng(RNG_SEED)
-    for _ in range(run_num - 1):
-        rng.normal(0, DIR_SIGMA)
-        rng.lognormal(0, SPEED_SIGMA)
-        rng.lognormal(np.log(NW_AMP), SPEED_SIGMA)
-        rng.lognormal(0, MOISTURE_SIGMA)
-
-    direction_offset    = rng.normal(0, DIR_SIGMA)
-    speed_multiplier    = rng.lognormal(0, SPEED_SIGMA)
-    nw_amp_multiplier   = rng.lognormal(np.log(NW_AMP), SPEED_SIGMA)
-    moisture_multiplier = rng.lognormal(0, MOISTURE_SIGMA)
-
-    # Foehn drying: above-average NW amp → correlated moisture reduction
-    if nw_amp_multiplier > FOEHN_THRESHOLD:
-        moisture_multiplier *= FOEHN_DRYING
-
-    return (direction_offset, speed_multiplier, nw_amp_multiplier,
-            moisture_multiplier, BASE_SEED + run_num)
+def generate_params(run_num, n_wind_records):
+    """Per-run seed — identical to generate_ensemble.py v7."""
+    rng = np.random.default_rng([RNG_SEED, run_num])
+    direction_offsets   = rng.normal(0, DIR_SIGMA, size=n_wind_records)
+    speed_multipliers   = rng.lognormal(mean=0, sigma=SPEED_SIGMA, size=n_wind_records)
+    moisture_multiplier = rng.lognormal(mean=0, sigma=MOISTURE_SIGMA)
+    return direction_offsets, speed_multipliers, moisture_multiplier, BASE_SEED + run_num
 
 
 def main():
@@ -111,19 +94,21 @@ def main():
     output_path   = sys.argv[3]   # e.g. /data/input/run_042.input
 
     run_num = int(run_id.split("_")[1])
-    direction_offset, speed_multiplier, nw_amp_multiplier, moisture_multiplier, spotting_seed = \
-        sample_params(run_num)
 
     header_lines, fuel_rows, mid_lines, wind_rows, post_wind = parse_input_file(template_path)
+
+    direction_offsets, speed_multipliers, moisture_multiplier, spotting_seed = \
+        generate_params(run_num, len(wind_rows))
+
     content = build_content(header_lines, fuel_rows, mid_lines, wind_rows, post_wind,
-                            spotting_seed, direction_offset, speed_multiplier,
-                            nw_amp_multiplier, moisture_multiplier)
+                            spotting_seed, direction_offsets, speed_multipliers,
+                            moisture_multiplier)
 
     with open(output_path, "w") as f:
         f.write(content)
 
-    print(f"[generate_run] {run_id}: dir={direction_offset:+.1f}° spd=x{speed_multiplier:.2f} "
-          f"nw_amp=x{nw_amp_multiplier:.2f} moist=x{moisture_multiplier:.2f}")
+    print(f"[generate_run] {run_id}: dir_mean={direction_offsets.mean():+.1f}° "
+          f"spd_mean=x{speed_multipliers.mean():.2f} moist=x{moisture_multiplier:.2f}")
 
 
 if __name__ == "__main__":
