@@ -87,7 +87,8 @@ jobs:
           last=0
           echo "Waiting for $N runs in s3://$BUCKET/outputs/ ..."
           while true; do
-            COUNT=$(aws s3 ls "s3://$BUCKET/outputs/" | grep -c "PRE " || echo 0)
+            COUNT=$(aws s3 ls "s3://$BUCKET/outputs/" 2>/dev/null | grep -c "PRE " || true)
+            COUNT=${COUNT:-0}
             echo "  $(date +%H:%M:%S)  Completed: $COUNT / $N"
             [ "$COUNT" -ge "$N" ] && break
             if [ "$COUNT" -eq "$last" ]; then

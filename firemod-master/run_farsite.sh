@@ -42,6 +42,13 @@ CMD
 echo "[farsite] Running simulation..."
 TestFARSITE /tmp/cmd.txt
 
+# Verify FARSITE produced output (exits 0 silently on "No ignition")
+ARRIVAL_FILE="/data/output/$RUN_ID/${RUN_ID}_ArrivalTime.asc"
+if [ ! -f "$ARRIVAL_FILE" ]; then
+    echo "[farsite] ERROR: No ArrivalTime.asc produced — FARSITE likely said No ignition or No spread"
+    exit 1
+fi
+
 # ── 5. Upload outputs ─────────────────────────────────────────────────────────
 echo "[farsite] Uploading outputs to s3://$S3_BUCKET/$S3_OUTPUTS/$RUN_ID/"
 aws s3 sync \
