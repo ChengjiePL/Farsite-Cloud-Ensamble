@@ -27,9 +27,9 @@ echo "Cluster: $CLUSTER  ($REGION)"
 echo "Image:   $RUNNER_IMAGE"
 echo "Bucket:  s3://$S3_BUCKET"
 
-echo ""
-echo "Configuring kubectl..."
-aws eks update-kubeconfig --region "$REGION" --name "$CLUSTER" --alias farsite
+# echo ""
+# echo "Configuring kubectl..."
+# aws eks update-kubeconfig --region "$REGION" --name "$CLUSTER" --alias farsite
 
 echo "Generating and submitting $N_RUNS job manifests..."
 
