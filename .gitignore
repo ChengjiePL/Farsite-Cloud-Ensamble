@@ -65,6 +65,10 @@ tests/*
 !tests/runcase_7_extended_docker.txt
 !tests/Case7_ignition.*
 !tests/Per4_utm.*
+!tests/CASE_2.lcp
+!tests/case_2.input
+!tests/Case2_Per1.*
+!tests/Case2_Per4.*
 
 *.asc
 *.fbg
