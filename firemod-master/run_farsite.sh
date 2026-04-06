@@ -24,7 +24,9 @@ mkdir -p /data/input /data/output/"$RUN_ID"
 
 # ── 1. Download shared base assets (landscape + ignition shapefile) ───────────
 echo "[farsite] Downloading base assets from s3://$S3_BUCKET/$S3_BASE/"
-aws s3 sync "s3://$S3_BUCKET/$S3_BASE/" /data/input/ --quiet
+aws s3 sync "s3://$S3_BUCKET/$S3_BASE/" /data/input/
+echo "[farsite] Downloaded files:"
+ls -la /data/input/
 
 # ── 2. Generate run-specific perturbed .input file (no S3 download needed) ───
 echo "[farsite] Generating perturbation for $RUN_ID"
@@ -37,10 +39,14 @@ python3 /usr/local/bin/generate_run.py \
 cat > /tmp/cmd.txt <<CMD
 /data/input/CASE_7.lcp /data/input/$RUN_ID.input /data/input/Case7_ignition.shp 0 /data/output/$RUN_ID/$RUN_ID 0
 CMD
+echo "[farsite] Command file:"
+cat /tmp/cmd.txt
 
 # ── 4. Run FARSITE ────────────────────────────────────────────────────────────
 echo "[farsite] Running simulation..."
-TestFARSITE /tmp/cmd.txt
+TestFARSITE /tmp/cmd.txt 2>&1
+echo "[farsite] Output files:"
+ls -la /data/output/"$RUN_ID"/ 2>/dev/null || echo "  (empty)"
 
 # Verify FARSITE produced output (exits 0 silently on "No ignition")
 ARRIVAL_FILE="/data/output/$RUN_ID/${RUN_ID}_ArrivalTime.asc"
