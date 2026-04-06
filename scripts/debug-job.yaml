@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: farsite-debug-001
+  labels:
+    app: farsite
+spec:
+  ttlSecondsAfterFinished: 86400
+  backoffLimit: 0
+  template:
+    spec:
+      activeDeadlineSeconds: 600
+      restartPolicy: Never
+      containers:
+        - name: farsite
+          image: chengjiepl/farsite-runner:latest
+          env:
+            - name: RUN_ID
+              value: "run_001"
+            - name: S3_BUCKET
+              value: "farsite-tfg-simulations-769511535154"
+          resources:
+            requests:
+              cpu: "900m"
+              memory: "700Mi"
+            limits:
+              cpu: "1"
+              memory: "1.5Gi"

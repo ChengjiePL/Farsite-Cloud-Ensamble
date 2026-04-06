@@ -29,14 +29,14 @@ echo "Bucket:  s3://$S3_BUCKET"
 
 echo ""
 echo "Configuring kubectl..."
-aws eks update-kubeconfig --region "$REGION" --name "$CLUSTER" --profile new-admin --alias farsite
+aws eks update-kubeconfig --region "$REGION" --name "$CLUSTER" --alias farsite
 
 echo "Generating and submitting $N_RUNS job manifests..."
 
 (
-for i in $(seq 1 "$N_RUNS"); do
-    RUN_ID=$(printf "run_%03d" "$i")        # matches S3 files: run_001.input
-    JOB_NAME=$(printf "farsite-run-%03d" "$i")  # k8s name: no underscores allowed
+  for i in $(seq 1 "$N_RUNS"); do
+    RUN_ID=$(printf "run_%03d" "$i")           # matches S3 files: run_001.input
+    JOB_NAME=$(printf "farsite-run-%03d" "$i") # k8s name: no underscores allowed
     cat <<EOF
 apiVersion: batch/v1
 kind: Job
@@ -68,7 +68,7 @@ spec:
               memory: "1.5Gi"
 ---
 EOF
-done
+  done
 ) | kubectl apply -f -
 
 echo ""
