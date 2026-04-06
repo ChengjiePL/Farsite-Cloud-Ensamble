@@ -18,6 +18,11 @@ S3_BASE="${S3_BASE_PREFIX:-base}"
 S3_INPUTS="${S3_INPUT_PREFIX:-inputs}"
 S3_OUTPUTS="${S3_OUTPUT_PREFIX:-outputs}"
 
+# Case-specific files (overridable per case)
+LCP_FILE="${LCP_FILE:-CASE_7.lcp}"
+INPUT_TEMPLATE="${INPUT_TEMPLATE:-case_7_extended.input}"
+IGNITION_FILE="${IGNITION_FILE:-Case7_ignition.shp}"
+
 echo "[farsite] ── Starting $RUN_ID ──"
 
 mkdir -p /data/input /data/output/"$RUN_ID"
@@ -32,12 +37,12 @@ ls -la /data/input/
 echo "[farsite] Generating perturbation for $RUN_ID"
 python3 /usr/local/bin/generate_run.py \
     "$RUN_ID" \
-    "/data/input/case_7_extended.input" \
+    "/data/input/$INPUT_TEMPLATE" \
     "/data/input/$RUN_ID.input"
 
 # ── 3. Build command file (TestFARSITE reads a 6-token file, not CLI args) ────
 cat > /tmp/cmd.txt <<CMD
-/data/input/CASE_7.lcp /data/input/$RUN_ID.input /data/input/Case7_ignition.shp 0 /data/output/$RUN_ID/$RUN_ID 0
+/data/input/$LCP_FILE /data/input/$RUN_ID.input /data/input/$IGNITION_FILE 0 /data/output/$RUN_ID/$RUN_ID 0
 CMD
 echo "[farsite] Command file:"
 cat /tmp/cmd.txt

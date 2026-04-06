@@ -3,6 +3,15 @@ name: FARSITE Probabilistic Ensemble
 on:
   workflow_dispatch:
     inputs:
+      case_name:
+        description: 'Fire case to simulate'
+        required: true
+        default: 'case_7'
+        type: choice
+        options:
+          - case_7    # Dimos Valtetsioy, Arkàdia, Grècia (agost 2011)
+          - case_1    # Portugal/Espanya (setembre 2013)
+          - case_2    # Trás-os-Montes (Portugal/Espanya, agost 2012)
       n_runs:
         description: 'Number of simulation runs'
         required: true
@@ -16,10 +25,10 @@ on:
 
 jobs:
   ensemble:
-    name: Run ensemble (${{ inputs.n_runs }} runs)
+    name: Run ensemble (${{ inputs.case_name }}, ${{ inputs.n_runs }} runs)
     runs-on: ubuntu-latest
     timeout-minutes: 480   # 8 hours max
-    environment: AWS   # 👈 AQUÍ
+    environment: AWS
 
     steps:
       # ── Setup ────────────────────────────────────────────────────────────────
@@ -54,9 +63,9 @@ jobs:
           CLUSTER=$(terraform -chdir=terraform output -raw cluster_name)
           aws eks update-kubeconfig --region "$REGION" --name "$CLUSTER"
 
-      # ── Upload base assets (fast — no perturbed inputs) ──────────────────────
+      # ── Upload base assets for the selected case ──────────────────────────────
       - name: Upload base assets to S3
-        run: bash scripts/02_upload_inputs.sh
+        run: bash scripts/02_upload_inputs.sh ${{ inputs.case_name }}
 
       # ── Build & push Docker image ─────────────────────────────────────────────
       # - name: Login to DockerHub
@@ -76,7 +85,7 @@ jobs:
 
       # ── Simulations ──────────────────────────────────────────────────────────
       - name: Submit ${{ inputs.n_runs }} simulation jobs
-        run: bash scripts/03_submit_jobs.sh ${{ inputs.n_runs }}
+        run: bash scripts/03_submit_jobs.sh ${{ inputs.n_runs }} ${{ inputs.case_name }}
 
       - name: Wait for simulations to complete
         run: |
@@ -106,12 +115,12 @@ jobs:
 
       # ── Visualization on EKS (no 30GB download) ───────────────────────────────
       - name: Run visualization job on EKS
-        run: bash scripts/05_visualize_on_eks.sh ${{ inputs.n_runs }}
+        run: bash scripts/05_visualize_on_eks.sh ${{ inputs.n_runs }} ${{ inputs.case_name }}
 
       - name: Upload probability map as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: farsite-probability-map
+          name: farsite-probability-map-${{ inputs.case_name }}
           path: farsite_v6_probability.png
           retention-days: 30
 

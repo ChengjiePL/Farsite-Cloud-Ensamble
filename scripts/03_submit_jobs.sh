@@ -1,20 +1,26 @@
 #!/bin/bash
 # Step 3: Submit N Kubernetes Jobs to the EKS cluster.
 #
-# Cluster architecture:
-#   25 worker nodes (t3.medium SPOT) × 2 pods per node = 50 concurrent runs
-#   500 runs / 50 concurrent = ~10 min total (1h simulation per run)
-#
-# All 500 manifests are piped to kubectl in a single API call.
-#
 # Usage:
-#   cd <project-root> && bash scripts/03_submit_jobs.sh [N_RUNS]
+#   bash scripts/03_submit_jobs.sh [N_RUNS] [case_name]
+#   bash scripts/03_submit_jobs.sh 1000 case_7      # default
 
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 N_RUNS="${1:-1000}"
+CASE_NAME="${2:-case_7}"
+CASE_ENV="cases/${CASE_NAME}.env"
+
+if [ ! -f "$CASE_ENV" ]; then
+    echo "ERROR: Case config not found: $CASE_ENV"
+    echo "Available cases:"
+    ls cases/*.env 2>/dev/null | sed 's|cases/||;s|\.env||' | sed 's/^/  /'
+    exit 1
+fi
+
+source "$CASE_ENV"
 
 echo "── Step 3: Submit $N_RUNS FARSITE jobs to EKS ──"
 
@@ -26,17 +32,14 @@ S3_BUCKET=$(terraform -chdir=terraform output -raw s3_bucket_name)
 echo "Cluster: $CLUSTER  ($REGION)"
 echo "Image:   $RUNNER_IMAGE"
 echo "Bucket:  s3://$S3_BUCKET"
-
-# echo ""
-# echo "Configuring kubectl..."
-# aws eks update-kubeconfig --region "$REGION" --name "$CLUSTER" --alias farsite
+echo "Case:    $CASE_NAME ($CASE_LABEL)"
 
 echo "Generating and submitting $N_RUNS job manifests..."
 
 (
   for i in $(seq 1 "$N_RUNS"); do
-    RUN_ID=$(printf "run_%03d" "$i")           # matches S3 files: run_001.input
-    JOB_NAME=$(printf "farsite-run-%03d" "$i") # k8s name: no underscores allowed
+    RUN_ID=$(printf "run_%03d" "$i")
+    JOB_NAME=$(printf "farsite-run-%03d" "$i")
     cat <<EOF
 apiVersion: batch/v1
 kind: Job
@@ -44,6 +47,7 @@ metadata:
   name: ${JOB_NAME}
   labels:
     app: farsite
+    case: ${CASE_NAME}
 spec:
   ttlSecondsAfterFinished: 3600
   backoffLimit: 2
@@ -59,6 +63,12 @@ spec:
               value: "${RUN_ID}"
             - name: S3_BUCKET
               value: "${S3_BUCKET}"
+            - name: LCP_FILE
+              value: "${LCP_FILE}"
+            - name: INPUT_TEMPLATE
+              value: "${INPUT_TEMPLATE}"
+            - name: IGNITION_FILE
+              value: "${IGNITION_FILE}"
           resources:
             requests:
               cpu: "900m"

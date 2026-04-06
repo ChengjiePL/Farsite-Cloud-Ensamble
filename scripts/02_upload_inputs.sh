@@ -1,45 +1,61 @@
 #!/bin/bash
-# Step 2: Upload base assets to S3 (Case 7 extended — Nunomoral, Cáceres).
+# Step 2: Upload base assets to S3 for a given fire case.
 #
-# Uploads to base/:
-#   - CASE_7.lcp                  — landscape file
-#   - case_7_extended.input       — wind/fuel template (pods generate perturbations on-the-fly)
-#   - Per1_utm.*                  — ignition shapefile (fire start, 222 ha)
-#   - Per2_utm.*, Per3_utm.*      — observed perimeters (for visualization pod)
+# Reads case configuration from cases/<CASE_NAME>.env which defines:
+#   LCP_FILE, INPUT_TEMPLATE, IGNITION_FILE, OBSERVED_SHP
 #
-# NOTE: perturbed .input files are NO LONGER uploaded — each pod generates its
+# NOTE: perturbed .input files are NOT uploaded — each pod generates its
 # own using generate_run.py. This reduces upload from ~2-3h to ~30 seconds.
 #
 # Usage:
-#   cd <project-root> && bash scripts/02_upload_inputs.sh
+#   bash scripts/02_upload_inputs.sh [case_name]
+#   bash scripts/02_upload_inputs.sh case_7      # default
 
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+CASE_NAME="${1:-case_7}"
+CASE_ENV="cases/${CASE_NAME}.env"
+
+if [ ! -f "$CASE_ENV" ]; then
+    echo "ERROR: Case config not found: $CASE_ENV"
+    echo "Available cases:"
+    ls cases/*.env 2>/dev/null | sed 's|cases/||;s|\.env||' | sed 's/^/  /'
+    exit 1
+fi
+
+# Load case config
+source "$CASE_ENV"
+
 echo "── Step 2: Upload base assets to S3 ──"
+echo "Case:   $CASE_NAME ($CASE_LABEL)"
 
 BUCKET=$(terraform -chdir=terraform output -raw s3_bucket_name)
 echo "Bucket: s3://$BUCKET"
 echo ""
 
+# Strip .shp extension from IGNITION_FILE for shapefile upload loop
+IGNITION_BASE="${IGNITION_FILE%.shp}"
+OBSERVED_BASE="${OBSERVED_SHP}"
+
 # ── Landscape + wind template ──────────────────────────────────────────────────
 echo "Uploading landscape and wind template..."
-aws s3 cp tests/CASE_7.lcp                  "s3://$BUCKET/base/CASE_7.lcp"
-aws s3 cp tests/case_7_extended.input       "s3://$BUCKET/base/case_7_extended.input"
+aws s3 cp "tests/$LCP_FILE"        "s3://$BUCKET/base/$LCP_FILE"
+aws s3 cp "tests/$INPUT_TEMPLATE"  "s3://$BUCKET/base/$INPUT_TEMPLATE"
 
-# ── Ignition shapefile (Case7_ignition — ~36 ha, centre de l'incendi) ─────────
-echo "Uploading ignition shapefile..."
+# ── Ignition shapefile ─────────────────────────────────────────────────────────
+echo "Uploading ignition shapefile ($IGNITION_BASE)..."
 for ext in shp shx prj dbf; do
-    [ -f "tests/Case7_ignition.$ext" ] && \
-        aws s3 cp "tests/Case7_ignition.$ext" "s3://$BUCKET/base/Case7_ignition.$ext"
+    [ -f "tests/${IGNITION_BASE}.${ext}" ] && \
+        aws s3 cp "tests/${IGNITION_BASE}.${ext}" "s3://$BUCKET/base/${IGNITION_BASE}.${ext}"
 done
 
-# ── Observed final perimeter (Per4_utm — 1761 ha, per visualització) ──────────
-echo "Uploading observed perimeter shapefile..."
+# ── Observed perimeter (for visualization) ────────────────────────────────────
+echo "Uploading observed perimeter shapefile ($OBSERVED_BASE)..."
 for ext in shp shx prj dbf; do
-    [ -f "tests/Per4_utm.$ext" ] && \
-        aws s3 cp "tests/Per4_utm.$ext" "s3://$BUCKET/base/Per4_utm.$ext"
+    [ -f "tests/${OBSERVED_BASE}.${ext}" ] && \
+        aws s3 cp "tests/${OBSERVED_BASE}.${ext}" "s3://$BUCKET/base/${OBSERVED_BASE}.${ext}"
 done
 
 echo ""

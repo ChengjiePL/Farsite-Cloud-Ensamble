@@ -6,15 +6,24 @@
 # Only ~1MB leaves AWS — no 30GB local download needed.
 #
 # Usage:
-#   bash scripts/05_visualize_on_eks.sh [N_RUNS]
+#   bash scripts/05_visualize_on_eks.sh [N_RUNS] [case_name]
 
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 N_RUNS="${1:-10000}"
+CASE_NAME="${2:-case_7}"
+CASE_ENV="cases/${CASE_NAME}.env"
+
+if [ ! -f "$CASE_ENV" ]; then
+    echo "ERROR: Case config not found: $CASE_ENV"
+    exit 1
+fi
+source "$CASE_ENV"
 
 echo "── Step 5: Visualization job on EKS ──"
+echo "Case: $CASE_NAME ($CASE_LABEL)"
 
 REGION=$(terraform -chdir=terraform output -raw aws_region)
 CLUSTER=$(terraform -chdir=terraform output -raw cluster_name)
@@ -47,6 +56,16 @@ spec:
               value: "${S3_BUCKET}"
             - name: N_RUNS
               value: "${N_RUNS}"
+            - name: CASE_LABEL
+              value: "${CASE_LABEL}"
+            - name: OBSERVED_SHP
+              value: "${OBSERVED_SHP}"
+            - name: OBSERVED_LABEL
+              value: "${OBSERVED_LABEL}"
+            - name: IGNITION_SHP
+              value: "${IGNITION_FILE%.shp}"
+            - name: IGNITION_LABEL
+              value: "Ignició"
           resources:
             requests:
               cpu: "1"

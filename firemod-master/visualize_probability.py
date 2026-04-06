@@ -6,14 +6,19 @@ import os
 # ---------------------------------------------------------------------------
 # Config — overridable via environment variables (container use)
 # ---------------------------------------------------------------------------
-ensemble_dir = os.environ.get("ENSEMBLE_DIR", "output")
-n_runs       = int(os.environ.get("N_RUNS", "10000"))
-tests_dir    = os.environ.get("TESTS_DIR", "tests")
-output_file  = os.environ.get("OUTPUT_FILE", "farsite_v6_probability.png")
+ensemble_dir   = os.environ.get("ENSEMBLE_DIR",   "output")
+n_runs         = int(os.environ.get("N_RUNS",       "10000"))
+tests_dir      = os.environ.get("TESTS_DIR",        "tests")
+output_file    = os.environ.get("OUTPUT_FILE",      "farsite_v6_probability.png")
+case_label     = os.environ.get("CASE_LABEL",       "Case 7 — Dimos Valtetsioy (Arkàdia, Grècia)")
+observed_shp   = os.environ.get("OBSERVED_SHP",     "Per4_utm")
+observed_label = os.environ.get("OBSERVED_LABEL",   "Perímetre final observat (1761 ha)")
+ignition_shp   = os.environ.get("IGNITION_SHP",     "Case7_ignition")
+ignition_label = os.environ.get("IGNITION_LABEL",   "Ignició (~36 ha)")
 
 observed = [
-    (f"{tests_dir}/Case7_ignition", "Ignició (~36 ha)",       "white"),
-    (f"{tests_dir}/Per4_utm",       "Final observat (1761 ha)", "#FF3D00"),
+    (f"{tests_dir}/{ignition_shp}", ignition_label, "white"),
+    (f"{tests_dir}/{observed_shp}", observed_label, "#FF3D00"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -64,7 +69,7 @@ burn_prob[burn_prob == 0] = np.nan
 # ---------------------------------------------------------------------------
 fig, (ax_obs, ax_prob) = plt.subplots(1, 2, figsize=(22, 10))
 fig.suptitle(
-    f"FARSITE Case 7 — Nunomoral (Cáceres) — Ensemble Probabilístic ({loaded} runs)\n"
+    f"FARSITE {case_label} — Ensemble Probabilístic ({loaded} runs)\n"
     "Pertorbació v7: dir Normal(0°,σ=20°) per registre | vel LogNormal(σ=0.20) per registre | Humitat LogNormal(σ=0.25) per run",
     fontsize=13, fontweight="bold"
 )
@@ -79,7 +84,7 @@ def setup_ax(ax, title):
     ax.set_ylabel("Northing (m)", fontsize=10)
 
 # ── PANEL 1: Perímetres observats reals ──────────────────────────────────────
-setup_ax(ax_obs, "Incendi real observat\n(Nunomoral, Cáceres)")
+setup_ax(ax_obs, f"Incendi real observat\n({case_label})")
 
 for i, (filepath, label, color) in enumerate(observed):
     if not os.path.exists(filepath + ".shp"):
