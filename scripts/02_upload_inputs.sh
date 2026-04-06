@@ -1,11 +1,11 @@
 #!/bin/bash
-# Step 2: Upload base assets to S3 (Case 1 extended).
+# Step 2: Upload base assets to S3 (Case 7 extended — Nunomoral, Cáceres).
 #
 # Uploads to base/:
-#   - CASE_1.lcp                  — landscape file
-#   - case_1_extended.input       — wind/fuel template (pods generate perturbations on-the-fly)
-#   - Per1_02092013.*             — ignition shapefile
-#   - Per1..Per4_*.shp/shx/prj   — observed perimeters (for visualization pod)
+#   - CASE_7.lcp                  — landscape file
+#   - case_7_extended.input       — wind/fuel template (pods generate perturbations on-the-fly)
+#   - Per1_utm.*                  — ignition shapefile (fire start, 222 ha)
+#   - Per2_utm.*, Per3_utm.*      — observed perimeters (for visualization pod)
 #
 # NOTE: perturbed .input files are NO LONGER uploaded — each pod generates its
 # own using generate_run.py. This reduces upload from ~2-3h to ~30 seconds.
@@ -25,23 +25,21 @@ echo ""
 
 # ── Landscape + wind template ──────────────────────────────────────────────────
 echo "Uploading landscape and wind template..."
-aws s3 cp tests/CASE_1.lcp                  "s3://$BUCKET/base/CASE_1.lcp"
-aws s3 cp tests/case_1_extended.input       "s3://$BUCKET/base/case_1_extended.input"
+aws s3 cp tests/CASE_7.lcp                  "s3://$BUCKET/base/CASE_7.lcp"
+aws s3 cp tests/case_7_extended.input       "s3://$BUCKET/base/case_7_extended.input"
 
-# ── Ignition shapefile (Per1 — simulation start) ───────────────────────────────
+# ── Ignition shapefile (Case7_ignition — ~36 ha, centre de l'incendi) ─────────
 echo "Uploading ignition shapefile..."
-for ext in shp shx prj dbf sbn sbx; do
-    [ -f "tests/Per1_02092013.$ext" ] && \
-        aws s3 cp "tests/Per1_02092013.$ext" "s3://$BUCKET/base/Per1_02092013.$ext"
+for ext in shp shx prj dbf; do
+    [ -f "tests/Case7_ignition.$ext" ] && \
+        aws s3 cp "tests/Case7_ignition.$ext" "s3://$BUCKET/base/Case7_ignition.$ext"
 done
 
-# ── Observed perimeters (Per1-Per4 — for visualization) ───────────────────────
-echo "Uploading observed perimeter shapefiles..."
-for per in Per1_02092013 Per2_03092013 Per3_04092013 Per4_06092013; do
-    for ext in shp shx prj dbf sbn sbx; do
-        [ -f "tests/$per.$ext" ] && \
-            aws s3 cp "tests/$per.$ext" "s3://$BUCKET/base/$per.$ext"
-    done
+# ── Observed final perimeter (Per4_utm — 1761 ha, per visualització) ──────────
+echo "Uploading observed perimeter shapefile..."
+for ext in shp shx prj dbf; do
+    [ -f "tests/Per4_utm.$ext" ] && \
+        aws s3 cp "tests/Per4_utm.$ext" "s3://$BUCKET/base/Per4_utm.$ext"
 done
 
 echo ""

@@ -12,10 +12,8 @@ tests_dir    = os.environ.get("TESTS_DIR", "tests")
 output_file  = os.environ.get("OUTPUT_FILE", "farsite_v6_probability.png")
 
 observed = [
-    (f"{tests_dir}/Per1_02092013", "2 sept (ignició)",  "white"),
-    (f"{tests_dir}/Per2_03092013", "3 sept",             "#FFD54F"),
-    (f"{tests_dir}/Per3_04092013", "4 sept",             "#FF8F00"),
-    (f"{tests_dir}/Per4_06092013", "6 sept (final)",     "#FF3D00"),
+    (f"{tests_dir}/Case7_ignition", "Ignició (~36 ha)",       "white"),
+    (f"{tests_dir}/Per4_utm",       "Final observat (1761 ha)", "#FF3D00"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -66,8 +64,8 @@ burn_prob[burn_prob == 0] = np.nan
 # ---------------------------------------------------------------------------
 fig, (ax_obs, ax_prob) = plt.subplots(1, 2, figsize=(22, 10))
 fig.suptitle(
-    f"FARSITE Case 1 Extended — Determinista vs Probabilístic ({loaded} runs)\n"
-    "Vent: dir Normal(0°,σ=20°) | vel LogNormal(σ=0.20) | NW 285-330° ×5.0 | Humitat LogNormal(σ=0.25) + Foehn drying ×0.75",
+    f"FARSITE Case 7 — Nunomoral (Cáceres) — Ensemble Probabilístic ({loaded} runs)\n"
+    "Pertorbació v7: dir Normal(0°,σ=20°) per registre | vel LogNormal(σ=0.20) per registre | Humitat LogNormal(σ=0.25) per run",
     fontsize=13, fontweight="bold"
 )
 
@@ -81,7 +79,7 @@ def setup_ax(ax, title):
     ax.set_ylabel("Northing (m)", fontsize=10)
 
 # ── PANEL 1: Perímetres observats reals ──────────────────────────────────────
-setup_ax(ax_obs, "Incendi real observat\n(2-6 setembre 2013)")
+setup_ax(ax_obs, "Incendi real observat\n(Nunomoral, Cáceres)")
 
 for i, (filepath, label, color) in enumerate(observed):
     if not os.path.exists(filepath + ".shp"):
@@ -126,16 +124,16 @@ for level, color, lw in [(0.10, "#FFF176", 1.5), (0.50, "#FF6D00", 2.0), (0.90, 
                         levels=[level], colors=[color], linewidths=[lw])
 
 # Observed final perimeter as reference
-per4_path = f"{tests_dir}/Per4_06092013"
-if os.path.exists(per4_path + ".shp"):
-    sf = shapefile.Reader(per4_path)
+per_final_path = f"{tests_dir}/Per4_utm"
+if os.path.exists(per_final_path + ".shp"):
+    sf = shapefile.Reader(per_final_path)
     pts = np.array(sf.shapes()[0].points)
     ax_prob.plot(pts[:, 0], pts[:, 1], color="white",
-                 linewidth=2.5, linestyle="--", label="Perímetre real final (6 sept)")
+                 linewidth=2.5, linestyle="--", label="Perímetre real final (1761 ha)")
 
 from matplotlib.lines import Line2D
 legend_handles = [
-    Line2D([0], [0], color="white",   linewidth=2.5, linestyle="--", label="Perímetre real final (6 sept)"),
+    Line2D([0], [0], color="white",   linewidth=2.5, linestyle="--", label="Perímetre real final (1761 ha)"),
     Line2D([0], [0], color="#FFF176", linewidth=1.5, label="10% probabilitat"),
     Line2D([0], [0], color="#FF6D00", linewidth=2.0, label="50% probabilitat"),
     Line2D([0], [0], color="#B71C1C", linewidth=2.5, label="90% probabilitat"),

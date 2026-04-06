@@ -30,12 +30,12 @@ aws s3 sync "s3://$S3_BUCKET/$S3_BASE/" /data/input/ --quiet
 echo "[farsite] Generating perturbation for $RUN_ID"
 python3 /usr/local/bin/generate_run.py \
     "$RUN_ID" \
-    "/data/input/case_1_extended.input" \
+    "/data/input/case_7_extended.input" \
     "/data/input/$RUN_ID.input"
 
 # ── 3. Build command file (TestFARSITE reads a 6-token file, not CLI args) ────
 cat > /tmp/cmd.txt <<CMD
-/data/input/CASE_1.lcp /data/input/$RUN_ID.input /data/input/Per1_02092013.shp 0 /data/output/$RUN_ID/$RUN_ID 0
+/data/input/CASE_7.lcp /data/input/$RUN_ID.input /data/input/Case7_ignition.shp 0 /data/output/$RUN_ID/$RUN_ID 0
 CMD
 
 # ── 4. Run FARSITE ────────────────────────────────────────────────────────────
