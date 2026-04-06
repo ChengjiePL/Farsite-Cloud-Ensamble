@@ -69,6 +69,11 @@ tests/*
 !tests/case_2.input
 !tests/Case2_Per1.*
 !tests/Case2_Per4.*
+!tests/CASE_6.lcp
+!tests/case_6.input
+!tests/Case6_ignition.*
+!tests/Per1_27082012.*
+!tests/Per3_29082012.*
 
 *.asc
 *.fbg

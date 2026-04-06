@@ -12,6 +12,7 @@ on:
           - case_7    # Dimos Valtetsioy, Arkàdia, Grècia (agost 2011)
           - case_1    # Portugal/Espanya (setembre 2013)
           - case_2    # Trás-os-Montes (Portugal/Espanya, agost 2012)
+          - case_6    # Dalmàcia (Croàcia, agost 2012)
       n_runs:
         description: 'Number of simulation runs'
         required: true
