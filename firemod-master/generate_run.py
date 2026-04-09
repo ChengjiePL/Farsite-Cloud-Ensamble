@@ -16,12 +16,12 @@ Usage:
 import sys
 import numpy as np
 
-# Must match generate_ensemble.py exactly — v7
+# Must match generate_ensemble.py exactly — v8
 RNG_SEED        = 42
 BASE_SEED       = 253114
-DIR_SIGMA       = 20.0
-SPEED_SIGMA     = 0.20
-MOISTURE_SIGMA  = 0.25
+DIR_SIGMA       = 40.0   # increased from 20° — wider directional spread
+SPEED_SIGMA     = 0.40   # increased from 0.20 — wider speed spread
+MOISTURE_SIGMA  = 0.0    # disabled — moisture not perturbed
 MOISTURE_MIN    = {1: 2, 10: 4, 100: 6}
 MIN_SPEED       = 1
 
@@ -80,11 +80,11 @@ def build_content(header_lines, fuel_rows, mid_lines, wind_rows, post_wind,
 
 
 def generate_params(run_num, n_wind_records):
-    """Per-run seed — identical to generate_ensemble.py v7."""
+    """Per-run seed — v8: wind-only perturbation, moisture disabled."""
     rng = np.random.default_rng([RNG_SEED, run_num])
     direction_offsets   = rng.normal(0, DIR_SIGMA, size=n_wind_records)
     speed_multipliers   = rng.lognormal(mean=0, sigma=SPEED_SIGMA, size=n_wind_records)
-    moisture_multiplier = rng.lognormal(mean=0, sigma=MOISTURE_SIGMA)
+    moisture_multiplier = 1.0  # no perturbation
     return direction_offsets, speed_multipliers, moisture_multiplier, BASE_SEED + run_num
 
 
