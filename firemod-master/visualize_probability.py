@@ -70,7 +70,7 @@ burn_prob[burn_prob == 0] = np.nan
 fig, (ax_obs, ax_prob) = plt.subplots(1, 2, figsize=(22, 10))
 fig.suptitle(
     f"FARSITE {case_label} — Ensemble Probabilístic ({loaded} runs)\n"
-    "Pertorbació v7: dir Normal(0°,σ=20°) per registre | vel LogNormal(σ=0.20) per registre | Humitat LogNormal(σ=0.25) per run",
+    "Pertorbació v8: dir Normal(0°,σ=40°) per registre | vel LogNormal(σ=0.40) per registre | vent únic",
     fontsize=13, fontweight="bold"
 )
 
@@ -129,16 +129,16 @@ for level, color, lw in [(0.10, "#FFF176", 1.5), (0.50, "#FF6D00", 2.0), (0.90, 
                         levels=[level], colors=[color], linewidths=[lw])
 
 # Observed final perimeter as reference
-per_final_path = f"{tests_dir}/Per4_utm"
+per_final_path = f"{tests_dir}/{observed_shp}"
 if os.path.exists(per_final_path + ".shp"):
     sf = shapefile.Reader(per_final_path)
     pts = np.array(sf.shapes()[0].points)
     ax_prob.plot(pts[:, 0], pts[:, 1], color="white",
-                 linewidth=2.5, linestyle="--", label="Perímetre real final (1761 ha)")
+                 linewidth=2.5, linestyle="--", label=observed_label)
 
 from matplotlib.lines import Line2D
 legend_handles = [
-    Line2D([0], [0], color="white",   linewidth=2.5, linestyle="--", label="Perímetre real final (1761 ha)"),
+    Line2D([0], [0], color="white",   linewidth=2.5, linestyle="--", label=observed_label),
     Line2D([0], [0], color="#FFF176", linewidth=1.5, label="10% probabilitat"),
     Line2D([0], [0], color="#FF6D00", linewidth=2.0, label="50% probabilitat"),
     Line2D([0], [0], color="#B71C1C", linewidth=2.5, label="90% probabilitat"),
