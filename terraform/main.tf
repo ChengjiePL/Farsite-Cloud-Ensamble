@@ -9,10 +9,10 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "farsite-tfstate"       # Nombre del bucket
+    bucket         = "farsite-tfstate-v2"       # Nombre del bucket
     key            = "terraform.tfstate"     # Ruta dentro del bucket
     region         = "eu-west-1"
-    dynamodb_table = "farsite-tfstate-lock"
+    dynamodb_table = "farsite-tfstate-lock-v2"
     encrypt        = true
   }
 }
