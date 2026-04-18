@@ -126,26 +126,12 @@ jobs:
           retention-days: 30
 
       # ── Cleanup ──────────────────────────────────────────────────────────────
-      - name: Destroy EKS cluster (keep S3)
+      - name: Destroy infrastructure
         if: ${{ inputs.destroy_after == 'true' }}
         run: |
-          terraform -chdir=terraform destroy -auto-approve \
-            -target=aws_eks_node_group.farsite \
-            -target=aws_eks_cluster.farsite \
-            -target=aws_launch_template.farsite \
-            -target=aws_iam_role_policy.eks_node_s3 \
-            -target=aws_iam_role_policy_attachment.eks_ecr_read \
-            -target=aws_iam_role_policy_attachment.eks_cni_policy \
-            -target=aws_iam_role_policy_attachment.eks_worker_node_policy \
-            -target=aws_iam_role_policy_attachment.eks_cluster_policy \
-            -target=aws_iam_role.eks_node \
-            -target=aws_iam_role.eks_cluster \
-            -target=aws_vpc_endpoint.s3 \
-            -target=aws_route_table_association.public \
-            -target=aws_route_table.public \
-            -target=aws_internet_gateway.farsite \
-            -target=aws_subnet.public \
-            -target=aws_vpc.farsite
+          BUCKET=$(terraform -chdir=terraform output -raw s3_bucket_name)
+          aws s3 rm "s3://$BUCKET/" --recursive
+          terraform -chdir=terraform destroy -auto-approve
 
       # - name: Destroy on failure
       #   if: failure()
