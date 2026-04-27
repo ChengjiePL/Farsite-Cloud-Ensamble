@@ -1,22 +1,16 @@
 #!/usr/bin/env python3
 """
-Layer 2: Parameter Sampling — Monte Carlo Multi-Variable Ensemble v7
+Layer 2: Parameter Sampling — Monte Carlo Multi-Variable Ensemble v9
 
-Generates N_RUNS FARSITE input files with perturbations across:
-  - Wind direction  : Normal(0°, DIR_SIGMA) — independent offset per wind record
-  - Wind speed      : LogNormal(0, SPEED_SIGMA) — independent multiplier per wind record
-  - Dead fuel moisture (1h, 10h, 100h): LogNormal(×1, MOISTURE_SIGMA) — one value per run
+Generates N_RUNS FARSITE input files with per-record perturbations across:
+  - Wind direction  : Normal(0°, DIR_SIGMA) per WIND_DATA record
+  - Wind speed      : LogNormal(0, SPEED_SIGMA) multiplier per WIND_DATA record
+  - Temperature     : Normal(0, TEMP_SIGMA) °F additive offset per WEATHER_DATA record
+                      (same offset applied to mT and xT to preserve diurnal range)
+  - Humidity        : Normal(0, HUM_SIGMA) % additive offset per WEATHER_DATA record
+                      (same offset applied to mH and xH, clipped [1, 99])
 
-Key change vs v6:
-  Per-record perturbation: each of the N hourly wind records gets its own independent
-  direction offset and speed multiplier drawn from the same distributions.
-  This produces genuinely diverse meteorological scenarios instead of identical-shifted
-  wind profiles. Uses per-run seed np.random.default_rng([RNG_SEED, run_num]) for
-  reproducibility without sequential RNG advancement.
-
-Output layout (inside tests/ensemble/):
-    run_001/run_001.input
-    ensemble_params.csv
+Fuel moisture: disabled in v9.
 
 Usage:
     .venv/bin/python3 generate_ensemble.py
@@ -30,120 +24,119 @@ import numpy as np
 # Configuration
 # ---------------------------------------------------------------------------
 BASE_INPUT   = "tests/case_7_extended.input"
-ENSEMBLE_DIR = "tests/ensemble"   # lives inside tests/ so Docker mount works
+ENSEMBLE_DIR = "tests/ensemble"
 N_RUNS       = 10000
-BASE_SEED    = 253114             # original SPOTTING_SEED from template
-RNG_SEED     = 42                 # reproducibility of ensemble generation
+BASE_SEED    = 253114
+RNG_SEED     = 42
 
-# Wind perturbation parameters (v7 — per-record)
-DIR_SIGMA    = 20.0   # degrees, normal distribution — applied independently per wind record
-SPEED_SIGMA  = 0.20   # log-normal sigma — applied independently per wind record
+# Wind perturbation (per WIND_DATA record)
+DIR_SIGMA    = 20.0
+SPEED_SIGMA  = 0.20
+MIN_SPEED    = 1
 
-# Fuel moisture perturbation (one value per run, correlated across fuel models)
-MOISTURE_SIGMA  = 0.25
-MOISTURE_MIN    = {1: 2, 10: 4, 100: 6}
+# Weather perturbation (per WEATHER_DATA record)
+TEMP_SIGMA   = 5.0
+HUM_SIGMA    = 8.0
+HUM_MIN      = 1
+HUM_MAX      = 99
 
-MIN_SPEED    = 1      # mph floor
+# Fuel moisture — disabled, mins still enforced
+MOISTURE_MIN = {1: 2, 10: 4, 100: 6}
 
-# Fixed FARSITE assets (relative to /data/input Docker mount point = tests/)
+# Fixed FARSITE assets (Docker mount = tests/)
 LCP_PATH     = "/data/input/CASE_7.lcp"
 IGN_PATH     = "/data/input/Case7_ignition.shp"
-
-# RNG configuration (v7)
-# Each run uses np.random.default_rng([RNG_SEED, run_num]) — no sequential advancement needed
 
 
 # ---------------------------------------------------------------------------
 # Parsing
 # ---------------------------------------------------------------------------
 def parse_input_file(path):
-    """
-    Returns:
-        header_lines  -- all lines before FUEL_MOISTURES_DATA block
-        fuel_rows     -- list of lists of ints per fuel model row
-        mid_lines     -- lines between fuel moisture block and WIND_DATA header
-        wind_rows     -- list of dicts: month, day, time, speed, direction, cloud
-        post_wind     -- lines after the wind data block
-    """
     with open(path, "r") as f:
         lines = [line.rstrip("\n") for line in f.readlines()]
 
-    # Find FUEL_MOISTURES_DATA block
-    fuel_start = None
-    fuel_count = 0
+    fuel_start = fuel_count = None
+    wx_start   = wx_count   = None
+    wind_start = wind_count = None
     for i, line in enumerate(lines):
         if line.startswith("FUEL_MOISTURES_DATA:"):
             fuel_start = i
             fuel_count = int(line.split(":")[1].strip())
-            break
-
-    if fuel_start is None:
-        raise ValueError("FUEL_MOISTURES_DATA block not found")
-
-    # Find WIND_DATA block
-    wind_start = None
-    wind_count = 0
-    for i, line in enumerate(lines):
-        if line.startswith("WIND_DATA:"):
+        elif line.startswith("WEATHER_DATA:"):
+            wx_start = i
+            wx_count = int(line.split(":")[1].strip())
+        elif line.startswith("WIND_DATA:"):
             wind_start = i
             wind_count = int(line.split(":")[1].strip())
-            break
 
-    if wind_start is None:
-        raise ValueError("WIND_DATA block not found")
+    if fuel_start is None or wx_start is None or wind_start is None:
+        raise ValueError("Required block (FUEL_MOISTURES_DATA / WEATHER_DATA / WIND_DATA) not found")
 
-    header_lines = lines[: fuel_start + 1]          # up to and including FUEL_MOISTURES_DATA: N
-    raw_fuel     = lines[fuel_start + 1 : fuel_start + 1 + fuel_count]
-    mid_lines    = lines[fuel_start + 1 + fuel_count : wind_start + 1]  # includes WIND_DATA header
-    raw_wind     = lines[wind_start + 1 : wind_start + 1 + wind_count]
-    post_wind    = lines[wind_start + 1 + wind_count :]
+    header_lines = lines[: fuel_start + 1]
+    raw_fuel     = lines[fuel_start + 1: fuel_start + 1 + fuel_count]
+    pre_wx       = lines[fuel_start + 1 + fuel_count: wx_start + 1]
+    raw_wx       = lines[wx_start + 1: wx_start + 1 + wx_count]
+    pre_wind     = lines[wx_start + 1 + wx_count: wind_start + 1]
+    raw_wind     = lines[wind_start + 1: wind_start + 1 + wind_count]
+    post_wind    = lines[wind_start + 1 + wind_count:]
 
-    fuel_rows = []
-    for line in raw_fuel:
-        fuel_rows.append([int(x) for x in line.split()])
+    fuel_rows = [[int(x) for x in l.split()] for l in raw_fuel]
+
+    wx_rows = []
+    for l in raw_wx:
+        p = l.split()
+        wx_rows.append({"month": p[0], "day": p[1], "rain": p[2],
+                        "mTH": p[3], "xTH": p[4],
+                        "mT": int(p[5]), "xT": int(p[6]),
+                        "mH": int(p[7]), "xH": int(p[8]),
+                        "elev": p[9]})
 
     wind_rows = []
-    for line in raw_wind:
-        parts = line.split()
-        wind_rows.append({
-            "month":     parts[0],
-            "day":       parts[1],
-            "time":      parts[2],
-            "speed":     int(parts[3]),
-            "direction": int(parts[4]),
-            "cloud":     parts[5],
-        })
+    for l in raw_wind:
+        p = l.split()
+        wind_rows.append({"month": p[0], "day": p[1], "time": p[2],
+                          "speed": int(p[3]), "direction": int(p[4]), "cloud": p[5]})
 
-    return header_lines, fuel_rows, mid_lines, wind_rows, post_wind
+    return header_lines, fuel_rows, pre_wx, wx_rows, pre_wind, wind_rows, post_wind
 
 
 # ---------------------------------------------------------------------------
 # Writing
 # ---------------------------------------------------------------------------
-def build_input_content(header_lines, fuel_rows, mid_lines, wind_rows, post_wind,
-                        spotting_seed, direction_offsets, speed_multipliers,
-                        moisture_multiplier):
+def build_input_content(header_lines, fuel_rows, pre_wx, wx_rows, pre_wind, wind_rows, post_wind,
+                        spotting_seed,
+                        temp_offsets, hum_offsets,
+                        direction_offsets, speed_multipliers):
     lines = []
 
-    # Header — swap SPOTTING_SEED for the run-specific value
     for line in header_lines:
-        if line.startswith("SPOTTING_SEED:"):
-            lines.append(f"SPOTTING_SEED: {spotting_seed}")
-        else:
-            lines.append(line)
+        lines.append(f"SPOTTING_SEED: {spotting_seed}" if line.startswith("SPOTTING_SEED:") else line)
 
-    # Perturbed fuel moisture rows
     for row in fuel_rows:
-        fuel_model = row[0]
-        m1h   = max(MOISTURE_MIN[1],   round(row[1] * moisture_multiplier))
-        m10h  = max(MOISTURE_MIN[10],  round(row[2] * moisture_multiplier))
-        m100h = max(MOISTURE_MIN[100], round(row[3] * moisture_multiplier))
-        lines.append(f"{fuel_model} {m1h} {m10h} {m100h} {row[4]} {row[5]}")
+        m1h   = max(MOISTURE_MIN[1],   row[1])
+        m10h  = max(MOISTURE_MIN[10],  row[2])
+        m100h = max(MOISTURE_MIN[100], row[3])
+        lines.append(f"{row[0]} {m1h} {m10h} {m100h} {row[4]} {row[5]}")
 
-    # Mid section (unchanged) + WIND_DATA header
-    lines.extend(mid_lines)
+    lines.extend(pre_wx)
 
-    # Perturbed wind rows — independent perturbation per record
+    for i, row in enumerate(wx_rows):
+        new_mT = int(round(row["mT"] + temp_offsets[i]))
+        new_xT = int(round(row["xT"] + temp_offsets[i]))
+        new_mH = int(np.clip(round(row["mH"] + hum_offsets[i]), HUM_MIN, HUM_MAX))
+        new_xH = int(np.clip(round(row["xH"] + hum_offsets[i]), HUM_MIN, HUM_MAX))
+        if new_xT < new_mT:
+            new_xT = new_mT
+        if new_xH > new_mH:
+            new_xH = new_mH
+        lines.append(
+            f"{row['month']} {row['day']} {row['rain']} "
+            f"{row['mTH']} {row['xTH']} "
+            f"{new_mT} {new_xT} {new_mH} {new_xH} {row['elev']}"
+        )
+
+    lines.extend(pre_wind)
+
     for i, row in enumerate(wind_rows):
         new_dir   = int((row["direction"] + direction_offsets[i]) % 360)
         new_speed = max(MIN_SPEED, round(row["speed"] * speed_multipliers[i]))
@@ -152,9 +145,7 @@ def build_input_content(header_lines, fuel_rows, mid_lines, wind_rows, post_wind
             f"{new_speed} {new_dir} {row['cloud']}"
         )
 
-    # Footer (unchanged)
     lines.extend(post_wind)
-
     return "\n".join(lines)
 
 
@@ -172,7 +163,9 @@ def write_docker_cmd(path, run_id):
 def main():
     os.makedirs(ENSEMBLE_DIR, exist_ok=True)
 
-    header_lines, fuel_rows, mid_lines, wind_rows, post_wind = parse_input_file(BASE_INPUT)
+    header_lines, fuel_rows, pre_wx, wx_rows, pre_wind, wind_rows, post_wind = \
+        parse_input_file(BASE_INPUT)
+    n_wx   = len(wx_rows)
     n_wind = len(wind_rows)
 
     params = []
@@ -182,45 +175,42 @@ def main():
         run_dir = os.path.join(ENSEMBLE_DIR, run_id)
         os.makedirs(run_dir, exist_ok=True)
 
-        # Per-run seed — reproducible without sequential RNG advancement
         rng = np.random.default_rng([RNG_SEED, i])
 
-        # Per-record perturbations: each wind record gets independent samples
-        direction_offsets   = rng.normal(0, DIR_SIGMA, size=n_wind)
+        temp_offsets        = rng.normal(0, TEMP_SIGMA,  size=n_wx)
+        hum_offsets         = rng.normal(0, HUM_SIGMA,   size=n_wx)
+        direction_offsets   = rng.normal(0, DIR_SIGMA,   size=n_wind)
         speed_multipliers   = rng.lognormal(mean=0, sigma=SPEED_SIGMA, size=n_wind)
-        # Moisture: one value per run (correlated across fuel models — physically consistent)
-        moisture_multiplier = rng.lognormal(mean=0, sigma=MOISTURE_SIGMA)
         spotting_seed       = BASE_SEED + i
 
-        # Write .input file
         input_content = build_input_content(
-            header_lines, fuel_rows, mid_lines, wind_rows, post_wind,
-            spotting_seed, direction_offsets, speed_multipliers,
-            moisture_multiplier,
+            header_lines, fuel_rows, pre_wx, wx_rows, pre_wind, wind_rows, post_wind,
+            spotting_seed,
+            temp_offsets, hum_offsets,
+            direction_offsets, speed_multipliers,
         )
         input_path = os.path.join(run_dir, f"{run_id}.input")
         with open(input_path, "w") as f:
             f.write(input_content)
 
-        # Write Docker command file
         docker_path = os.path.join(run_dir, f"{run_id}_docker.txt")
         write_docker_cmd(docker_path, run_id)
 
         params.append({
-            "run_id":               run_id,
-            "dir_offset_mean_deg":  round(float(direction_offsets.mean()), 4),
-            "speed_mult_mean":      round(float(speed_multipliers.mean()), 4),
-            "moisture_multiplier":  round(moisture_multiplier, 4),
-            "spotting_seed":        spotting_seed,
+            "run_id":              run_id,
+            "dir_offset_mean_deg": round(float(direction_offsets.mean()), 4),
+            "speed_mult_mean":     round(float(speed_multipliers.mean()), 4),
+            "temp_offset_mean_F":  round(float(temp_offsets.mean()), 4),
+            "hum_offset_mean_pct": round(float(hum_offsets.mean()), 4),
+            "spotting_seed":       spotting_seed,
         })
 
         if i % 100 == 0:
             print(f"  Generated {i}/{N_RUNS}")
 
-    # Traceability CSV
     csv_path = os.path.join(ENSEMBLE_DIR, "ensemble_params.csv")
     fieldnames = ["run_id", "dir_offset_mean_deg", "speed_mult_mean",
-                  "moisture_multiplier", "spotting_seed"]
+                  "temp_offset_mean_F", "hum_offset_mean_pct", "spotting_seed"]
     with open(csv_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
