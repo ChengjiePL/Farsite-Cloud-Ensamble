@@ -13,8 +13,14 @@ on:
           - case_1    # Portugal/Espanya (setembre 2013)
           - case_2    # Trás-os-Montes (Portugal/Espanya, agost 2012)
           - case_6    # Dalmàcia (Croàcia, agost 2012)
+          - case_3    # Untested ensemble case
+          - case_4    # Untested ensemble case
+          - case_5    # Untested ensemble case
+          - case_8    # Untested ensemble case
+          - case_9    # Untested ensemble case
+          - case_10   # Untested ensemble case
       n_runs:
-        description: 'Number of simulation runs'
+        description: 'Number of simulation runs (use 1 for a quick single-run smoke test)'
         required: true
         default: '1000'
       destroy_after:
@@ -126,12 +132,29 @@ jobs:
           retention-days: 30
 
       # ── Cleanup ──────────────────────────────────────────────────────────────
-      - name: Destroy infrastructure
+      # Order matters for cost: kill compute (node group + EKS control plane + NAT)
+      # BEFORE the slow `aws s3 rm` on large buckets (can take 1-2h with 10k+ runs).
+      # Otherwise the cluster keeps billing while S3 empties.
+      - name: Destroy compute first (node group + EKS)
+        if: ${{ inputs.destroy_after == 'true' }}
+        run: |
+          cd terraform
+          terraform destroy -auto-approve \
+            -target=aws_eks_node_group.farsite \
+            -target=aws_eks_cluster.farsite
+
+      - name: Empty S3 bucket (parallel delete)
         if: ${{ inputs.destroy_after == 'true' }}
         run: |
           BUCKET=$(terraform -chdir=terraform output -raw s3_bucket_name)
-          aws s3 rm "s3://$BUCKET/" --recursive
-          terraform -chdir=terraform destroy -auto-approve
+          aws configure set default.s3.max_concurrent_requests 200
+          aws s3 rm "s3://$BUCKET/" --recursive --only-show-errors
+
+      - name: Destroy remaining infrastructure
+        if: ${{ inputs.destroy_after == 'true' }}
+        run: |
+          cd terraform
+          terraform destroy -auto-approve
 
       # - name: Destroy on failure
       #   if: failure()
