@@ -133,8 +133,10 @@ jobs:
 
       # ── Cleanup ──────────────────────────────────────────────────────────────
       # Order matters for cost: kill compute (node group + EKS control plane + NAT)
-      # BEFORE the slow `aws s3 rm` on large buckets (can take 1-2h with 10k+ runs).
-      # Otherwise the cluster keeps billing while S3 empties.
+      # BEFORE destroying the rest. Otherwise the cluster keeps billing while
+      # the S3 bucket is being emptied. The bucket itself uses `force_destroy = true`
+      # in Terraform so the final destroy handles object deletion in parallel
+      # (BatchDelete, ~1000 objects/request) instead of the slow `aws s3 rm`.
       - name: Destroy compute first (node group + EKS)
         if: ${{ inputs.destroy_after == 'true' }}
         run: |
@@ -143,14 +145,7 @@ jobs:
             -target=aws_eks_node_group.farsite \
             -target=aws_eks_cluster.farsite
 
-      - name: Empty S3 bucket (parallel delete)
-        if: ${{ inputs.destroy_after == 'true' }}
-        run: |
-          BUCKET=$(terraform -chdir=terraform output -raw s3_bucket_name)
-          aws configure set default.s3.max_concurrent_requests 200
-          aws s3 rm "s3://$BUCKET/" --recursive --only-show-errors
-
-      - name: Destroy remaining infrastructure
+      - name: Destroy remaining infrastructure (S3 force_destroy + VPC + IAM)
         if: ${{ inputs.destroy_after == 'true' }}
         run: |
           cd terraform
