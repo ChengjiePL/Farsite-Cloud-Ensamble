@@ -64,6 +64,7 @@ tests/*
 !tests/case_7_extended.input
 !tests/runcase_7_extended_docker.txt
 !tests/Case7_ignition.*
+!tests/Case7_initial.*
 !tests/Per4_utm.*
 !tests/CASE_2.lcp
 !tests/case_2.input
@@ -72,6 +73,7 @@ tests/*
 !tests/CASE_6.lcp
 !tests/case_6.input
 !tests/Case6_ignition.*
+!tests/Case6_initial.*
 !tests/Per1_27082012.*
 !tests/Per3_29082012.*
 
