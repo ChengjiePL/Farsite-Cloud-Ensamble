@@ -9,7 +9,7 @@ spec:
   backoffLimit: 0
   template:
     spec:
-      activeDeadlineSeconds: 600
+      activeDeadlineSeconds: 1800
       restartPolicy: Never
       containers:
         - name: farsite
@@ -19,6 +19,12 @@ spec:
               value: "run_001"
             - name: S3_BUCKET
               value: "farsite-tfg-simulations-769511535154"
+            - name: LCP_FILE
+              value: "CASE_6.lcp"
+            - name: INPUT_TEMPLATE
+              value: "case_6.input"
+            - name: IGNITION_FILE
+              value: "Case6_ignition.shp"
           resources:
             requests:
               cpu: "900m"

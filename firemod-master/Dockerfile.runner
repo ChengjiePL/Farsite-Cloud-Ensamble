@@ -23,10 +23,13 @@ COPY Makefile .
 RUN mkdir -p bin obj && make
 
 # ── Stage 2: Runtime + AWS CLI + wrapper ──────────────────────────────────────
-FROM debian:bookworm-slim
+FROM debian:bookworm-20240612-slim
 
 # Runtime dependencies for FARSITE + Python for input generation + visualization
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN rm -rf /var/lib/apt/lists/* \
+    && apt-get clean \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
         libstdc++6 \
         ca-certificates \
         curl \

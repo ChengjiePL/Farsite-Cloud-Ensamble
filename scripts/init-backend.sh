@@ -3,8 +3,8 @@ set -euo pipefail
 
 # Variables
 REGION="${AWS_REGION:-eu-west-1}" # puedes definir AWS_REGION en el runner
-BUCKET_NAME="${TF_STATE_BUCKET:-farsite-tfstate}"
-DYNAMODB_TABLE="${TF_LOCK_TABLE:-farsite-tfstate-lock}"
+BUCKET_NAME="${TF_STATE_BUCKET:-farsite-tfstate-v2}"
+DYNAMODB_TABLE="${TF_LOCK_TABLE:-farsite-tfstate-lock-v2}"
 PROFILE="${AWS_PROFILE:-default}"
 
 echo "Creating S3 bucket for Terraform state: $BUCKET_NAME in $REGION..."
