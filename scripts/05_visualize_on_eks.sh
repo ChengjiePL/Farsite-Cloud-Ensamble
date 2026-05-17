@@ -66,6 +66,11 @@ spec:
               value: "${IGNITION_FILE%.shp}"
             - name: IGNITION_LABEL
               value: "Ignició"
+            # Optional second suptitle line describing the perturbation.
+            # Define PERTURBATION_LABEL in the case .env (or export it) to set it;
+            # left empty the visualization just shows case + run count.
+            - name: PERTURBATION_LABEL
+              value: "${PERTURBATION_LABEL:-}"
           resources:
             requests:
               cpu: "1"

@@ -76,6 +76,22 @@ tests/*
 !tests/Case6_initial.*
 !tests/Per1_27082012.*
 !tests/Per3_29082012.*
+!tests/CASE_3.lcp
+!tests/case_3.input
+!tests/Case3_ign.*
+!tests/Case3_final.*
+!tests/CASE_4.lcp
+!tests/case_4.input
+!tests/Per1_08082013.*
+!tests/Per3_11082013.*
+!tests/CASE_5.lcp
+!tests/case_5.input
+!tests/Per1_10072013.*
+!tests/Case5_final.*
+!tests/CASE_8.lcp
+!tests/case_8.input
+!tests/Case8_ign.*
+!tests/Case8_final.*
 
 *.asc
 *.fbg

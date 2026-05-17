@@ -15,6 +15,9 @@ observed_shp   = os.environ.get("OBSERVED_SHP",     "Per4_utm")
 observed_label = os.environ.get("OBSERVED_LABEL",   "Perímetre final observat (1761 ha)")
 ignition_shp   = os.environ.get("IGNITION_SHP",     "Case7_ignition")
 ignition_label = os.environ.get("IGNITION_LABEL",   "Ignició (~36 ha)")
+# Optional second suptitle line describing the perturbation. Version-agnostic:
+# the pipeline passes whatever describes the current run, or leaves it empty.
+perturbation_label = os.environ.get("PERTURBATION_LABEL", "")
 
 observed = [
     (f"{tests_dir}/{ignition_shp}", ignition_label, "white"),
@@ -68,11 +71,10 @@ burn_prob[burn_prob == 0] = np.nan
 # Step 2 — Figure: 2 panels
 # ---------------------------------------------------------------------------
 fig, (ax_obs, ax_prob) = plt.subplots(1, 2, figsize=(22, 10))
-fig.suptitle(
-    f"FARSITE {case_label} — Ensemble Probabilístic ({loaded} runs)\n"
-    "Pertorbació v8: dir Normal(0°,σ=40°) per registre | vel LogNormal(σ=0.40) per registre | vent únic",
-    fontsize=13, fontweight="bold"
-)
+suptitle_text = f"FARSITE {case_label} — Ensemble Probabilístic ({loaded} runs)"
+if perturbation_label:
+    suptitle_text += f"\n{perturbation_label}"
+fig.suptitle(suptitle_text, fontsize=13, fontweight="bold")
 
 def setup_ax(ax, title):
     bg = np.ones((nrows, ncols)) * 0.95
