@@ -40,9 +40,16 @@ python3 /usr/local/bin/generate_run.py \
     "/data/input/$INPUT_TEMPLATE" \
     "/data/input/$RUN_ID.input"
 
+# ── 2b. Generate run-specific perturbed ignition perimeter ───────────────────
+echo "[farsite] Generating ignition perturbation for $RUN_ID"
+python3 /usr/local/bin/generate_ignition.py \
+    "$RUN_ID" \
+    "/data/input/$IGNITION_FILE" \
+    "/data/input/${RUN_ID}_ign.shp"
+
 # ── 3. Build command file (TestFARSITE reads a 6-token file, not CLI args) ────
 cat > /tmp/cmd.txt <<CMD
-/data/input/$LCP_FILE /data/input/$RUN_ID.input /data/input/$IGNITION_FILE 0 /data/output/$RUN_ID/$RUN_ID 0
+/data/input/$LCP_FILE /data/input/$RUN_ID.input /data/input/${RUN_ID}_ign.shp 0 /data/output/$RUN_ID/$RUN_ID 0
 CMD
 echo "[farsite] Command file:"
 cat /tmp/cmd.txt

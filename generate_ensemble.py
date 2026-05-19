@@ -9,6 +9,9 @@ Generates N_RUNS FARSITE input files with per-record perturbations across:
                       (same offset applied to mT and xT to preserve diurnal range)
   - Humidity        : Normal(0, HUM_SIGMA) % additive offset per WEATHER_DATA record
                       (same offset applied to mH and xH, clipped [1, 99])
+  - Ignition        : homothety scaling of the ignition perimeter about its
+                      centroid by (1 + f), f ~ Normal(0, IGN_SIGMA)
+                      (proportional perturbation — see generate_ignition.py)
 
 Fuel moisture: disabled in v9.
 
@@ -17,8 +20,14 @@ Usage:
 """
 
 import os
+import sys
 import csv
 import numpy as np
+
+# generate_ignition.py is the canonical ignition-perturbation module (also
+# shipped into the runner image); reuse it here so logic stays in one place.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "firemod-master"))
+from generate_ignition import perturb_ignition_shp
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -43,9 +52,11 @@ HUM_MAX      = 99
 # Fuel moisture — disabled, mins still enforced
 MOISTURE_MIN = {1: 2, 10: 4, 100: 6}
 
+# Ignition perimeter template (perturbed per run — see generate_ignition.py)
+BASE_IGN_SHP = "tests/Case7_ignition.shp"
+
 # Fixed FARSITE assets (Docker mount = tests/)
 LCP_PATH     = "/data/input/CASE_7.lcp"
-IGN_PATH     = "/data/input/Case7_ignition.shp"
 
 
 # ---------------------------------------------------------------------------
@@ -151,8 +162,9 @@ def build_input_content(header_lines, fuel_rows, pre_wx, wx_rows, pre_wind, wind
 
 def write_docker_cmd(path, run_id):
     input_docker = f"/data/input/ensemble/{run_id}/{run_id}.input"
+    ign_docker   = f"/data/input/ensemble/{run_id}/{run_id}_ign.shp"
     output_prefix = f"/data/output/{run_id}"
-    cmd = f"{LCP_PATH} {input_docker} {IGN_PATH} 0 {output_prefix} 0\n"
+    cmd = f"{LCP_PATH} {input_docker} {ign_docker} 0 {output_prefix} 0\n"
     with open(path, "w") as f:
         f.write(cmd)
 
@@ -193,6 +205,9 @@ def main():
         with open(input_path, "w") as f:
             f.write(input_content)
 
+        ign_scale, ign_f = perturb_ignition_shp(
+            i, BASE_IGN_SHP, os.path.join(run_dir, f"{run_id}_ign.shp"))
+
         docker_path = os.path.join(run_dir, f"{run_id}_docker.txt")
         write_docker_cmd(docker_path, run_id)
 
@@ -202,6 +217,7 @@ def main():
             "speed_mult_mean":     round(float(speed_multipliers.mean()), 4),
             "temp_offset_mean_F":  round(float(temp_offsets.mean()), 4),
             "hum_offset_mean_pct": round(float(hum_offsets.mean()), 4),
+            "ign_scale":           round(ign_scale, 4),
             "spotting_seed":       spotting_seed,
         })
 
@@ -210,7 +226,8 @@ def main():
 
     csv_path = os.path.join(ENSEMBLE_DIR, "ensemble_params.csv")
     fieldnames = ["run_id", "dir_offset_mean_deg", "speed_mult_mean",
-                  "temp_offset_mean_F", "hum_offset_mean_pct", "spotting_seed"]
+                  "temp_offset_mean_F", "hum_offset_mean_pct", "ign_scale",
+                  "spotting_seed"]
     with open(csv_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()

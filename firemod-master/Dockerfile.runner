@@ -56,6 +56,7 @@ COPY --from=builder /farsite/bin/TestFARSITE /usr/local/bin/TestFARSITE
 COPY run_farsite.sh        /usr/local/bin/run_farsite.sh
 COPY run_visualize.sh      /usr/local/bin/run_visualize.sh
 COPY generate_run.py       /usr/local/bin/generate_run.py
+COPY generate_ignition.py  /usr/local/bin/generate_ignition.py
 COPY visualize_probability.py /usr/local/bin/visualize_probability.py
 RUN chmod +x /usr/local/bin/run_farsite.sh /usr/local/bin/run_visualize.sh
 
