@@ -27,7 +27,7 @@ import numpy as np
 import shapefile  # pyshp
 
 RNG_SEED   = 42      # must match generate_run.py / generate_ensemble.py
-IGN_SIGMA  = 0.25    # std-dev of the homothety factor (25% relative — diagnostic)
+IGN_SIGMA  = 0.15    # std-dev of the homothety factor (15% relative)
 IGN_STREAM = 7       # distinct RNG sub-stream — keeps wind/weather draws stable
 F_CLIP     = 0.40    # clip |f| so the polygon never collapses or explodes
 
