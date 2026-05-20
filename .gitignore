@@ -92,6 +92,10 @@ tests/*
 !tests/case_8.input
 !tests/Case8_ign.*
 !tests/Case8_final.*
+!tests/CASE_9.lcp
+!tests/case_9.input
+!tests/Case9_ign.*
+!tests/Case9_final.*
 
 *.asc
 *.fbg
