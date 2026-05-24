@@ -55,10 +55,12 @@ COPY --from=builder /farsite/bin/TestFARSITE /usr/local/bin/TestFARSITE
 # Copy entrypoint and helper scripts
 COPY run_farsite.sh        /usr/local/bin/run_farsite.sh
 COPY run_visualize.sh      /usr/local/bin/run_visualize.sh
+COPY run_convergence.sh    /usr/local/bin/run_convergence.sh
 COPY generate_run.py       /usr/local/bin/generate_run.py
 COPY generate_ignition.py  /usr/local/bin/generate_ignition.py
 COPY visualize_probability.py /usr/local/bin/visualize_probability.py
-RUN chmod +x /usr/local/bin/run_farsite.sh /usr/local/bin/run_visualize.sh
+COPY convergence.py        /usr/local/bin/convergence.py
+RUN chmod +x /usr/local/bin/run_farsite.sh /usr/local/bin/run_visualize.sh /usr/local/bin/run_convergence.sh
 
 RUN mkdir -p /data/input /data/output
 

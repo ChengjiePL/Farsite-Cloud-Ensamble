@@ -131,6 +131,20 @@ jobs:
           path: farsite_v6_probability.png
           retention-days: 30
 
+      # ── Convergence analysis on EKS (subsamples the same ensemble) ────────────
+      - name: Run convergence analysis on EKS
+        run: bash scripts/06_convergence_on_eks.sh ${{ inputs.n_runs }} ${{ inputs.case_name }}
+
+      - name: Upload convergence results as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: farsite-convergence-${{ inputs.case_name }}
+          path: |
+            convergence.png
+            convergence.csv
+            prob_final.npy
+          retention-days: 30
+
       # ── Cleanup ──────────────────────────────────────────────────────────────
       # Order matters for cost: kill compute (node group + EKS control plane + NAT)
       # BEFORE destroying the rest. Otherwise the cluster keeps billing while

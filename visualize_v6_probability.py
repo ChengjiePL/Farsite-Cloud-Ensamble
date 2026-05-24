@@ -43,17 +43,23 @@ print(f"Extent: X [{xll:.0f}, {xur:.0f}]  Y [{yll:.0f}, {yur:.0f}]")
 
 burned_count = np.zeros((nrows, ncols), dtype=np.float32)
 loaded = 0
+skipped = 0
 
 for i in range(1, n_runs + 1):
     path = os.path.join(ensemble_dir, f"run_{i:03d}", f"run_{i:03d}_ArrivalTime.asc")
     if not os.path.exists(path):
         continue
     grid = np.loadtxt(path, skiprows=6)
+    # Skip grids whose shape does not match the reference (e.g. leftover outputs
+    # from a different case in the same bucket) instead of crashing.
+    if grid.shape != burned_count.shape:
+        skipped += 1
+        continue
     grid[grid == -9999.0] = np.nan
     burned_count += (~np.isnan(grid)).astype(np.float32)
     loaded += 1
 
-print(f"Loaded {loaded}/{n_runs} runs")
+print(f"Loaded {loaded}/{n_runs} runs" + (f" (skipped {skipped} mismatched)" if skipped else ""))
 
 burn_prob = burned_count / loaded
 burn_prob[burn_prob == 0] = np.nan
