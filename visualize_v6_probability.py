@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import shapefile
 import os
 
@@ -105,12 +106,15 @@ im = ax_prob.imshow(
     alpha=0.85,
     origin="upper",
 )
-# Colorbar over BOTH panels so it steals space equally and both panels keep
-# the same rendered size (otherwise only the right panel shrinks).
-cbar = fig.colorbar(im, ax=[ax_obs, ax_prob], shrink=0.6, pad=0.02)
+# Colorbar in its own axis to the right of the probability panel. An invisible
+# spacer of the same width is appended to the observed panel so BOTH panels keep
+# the same rendered size (a plain colorbar would shrink only the right panel).
+cax = make_axes_locatable(ax_prob).append_axes("right", size="4%", pad=0.15)
+cbar = fig.colorbar(im, cax=cax)
 cbar.set_label("Probabilitat de crema", fontsize=11)
 cbar.set_ticks([0, 0.25, 0.50, 0.75, 1.0])
 cbar.set_ticklabels(["0%", "25%", "50%", "75%", "100%"])
+make_axes_locatable(ax_obs).append_axes("right", size="4%", pad=0.15).set_visible(False)
 
 # Contour lines
 prob_plot = np.flipud(burn_prob)
