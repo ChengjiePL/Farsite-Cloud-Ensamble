@@ -2,9 +2,11 @@
 """
 Generate a single perturbed FARSITE .input file for a given run number.
 
-v9 — wind + weather perturbation (fuel moisture disabled).
-Per-record perturbation: each WIND_DATA and WEATHER_DATA record gets independent
-samples. Uses per-run seed np.random.default_rng([RNG_SEED, run_num]).
+v10 — wind from initial conditions + weather perturbation (fuel moisture disabled).
+Wind: every hourly record is the INITIAL wind value plus an independent Normal/
+LogNormal perturbation, so the pipeline needs only the initial conditions, not the
+full observed hourly series. Weather: per-record perturbation around the observed
+daily values. Uses per-run seed np.random.default_rng([RNG_SEED, run_num]).
 
 Usage:
     python3 generate_run.py <run_id> <template_input> <output_input>
@@ -117,10 +119,17 @@ def build_content(header_lines, fuel_rows, pre_wx, wx_rows, pre_wind, wind_rows,
     # Pre-wind (blank line + WIND_DATA: N header)
     lines.extend(pre_wind)
 
-    # Perturbed wind rows
+    # Perturbed wind rows — v10: every hour is derived from the INITIAL wind
+    # record plus an independent perturbation, instead of perturbing each
+    # observed hourly value. This removes the dependence on knowing the full
+    # observed/forecast hourly series: only the initial conditions are needed,
+    # and the ensemble explores plausible hour-by-hour evolutions from them.
+    # The record time grid (month/day/time/cloud) is kept from the template.
+    base_dir   = wind_rows[0]["direction"]
+    base_speed = wind_rows[0]["speed"]
     for i, row in enumerate(wind_rows):
-        new_dir   = int((row["direction"] + direction_offsets[i]) % 360)
-        new_speed = max(MIN_SPEED, round(row["speed"] * speed_multipliers[i]))
+        new_dir   = int((base_dir + direction_offsets[i]) % 360)
+        new_speed = max(MIN_SPEED, round(base_speed * speed_multipliers[i]))
         lines.append(f"{row['month']} {row['day']} {row['time']} {new_speed} {new_dir} {row['cloud']}")
 
     lines.extend(post_wind)
