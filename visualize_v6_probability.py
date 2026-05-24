@@ -105,7 +105,9 @@ im = ax_prob.imshow(
     alpha=0.85,
     origin="upper",
 )
-cbar = fig.colorbar(im, ax=ax_prob, shrink=0.6, pad=0.02)
+# Colorbar over BOTH panels so it steals space equally and both panels keep
+# the same rendered size (otherwise only the right panel shrinks).
+cbar = fig.colorbar(im, ax=[ax_obs, ax_prob], shrink=0.6, pad=0.02)
 cbar.set_label("Probabilitat de crema", fontsize=11)
 cbar.set_ticks([0, 0.25, 0.50, 0.75, 1.0])
 cbar.set_ticklabels(["0%", "25%", "50%", "75%", "100%"])
