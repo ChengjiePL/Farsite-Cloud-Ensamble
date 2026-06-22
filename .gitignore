@@ -39,6 +39,11 @@ visualize_v3_vs_observed.py
 visualize_v4_side_by_side.py
 visualize_v5_ensemble.py
 
+# Legacy FARSITE docs / dead source (kept local, excluded from remote)
+firemod-master/FARSITE_Instructions.txt
+firemod-master/FarsiteInputFile.txt
+firemod-master/unused_src/
+
 # Local docs (not part of pipeline)
 diario/
 Informe_Inicial_v2_condensat.md
