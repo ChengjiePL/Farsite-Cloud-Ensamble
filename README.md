@@ -1,4 +1,4 @@
-# FARSITE Monte Carlo — Cloud-Native Wildfire Ensembles
+# FARSITE Probabilistic — Cloud-Native Wildfire Ensembles
 
 Run **thousands of FARSITE simulations in parallel on AWS** to turn a
 deterministic fire-spread simulator into a probabilistic decision-support
